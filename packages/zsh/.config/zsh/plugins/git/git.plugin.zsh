@@ -1,21 +1,32 @@
-# This was pulled from https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git
+# Git aliases and helpers, originally from oh-my-zsh's git plugin, since heavily
+# trimmed. No longer tracks upstream.
 
 # Git version checking
 autoload -Uz is-at-least
 git_version="${${(As: :)$(git version 2>/dev/null)}[3]}"
 
-#
-# Functions Current
-# (sorted alphabetically by function name)
-# (order should follow README)
-#
+# Run read-only git commands without taking the optional index lock, so the
+# helpers/aliases below never contend with a concurrently-running git command.
+# Equivalent to `git --no-optional-locks`, via the env var so it degrades
+# gracefully on old git. Wrapped in a function (rather than exporting the var)
+# to avoid affecting git commands the user runs manually.
+function __git_prompt_git() {
+  GIT_OPTIONAL_LOCKS=0 command git "$@"
+}
 
-# The name of the current branch
-# Back-compatibility wrapper for when this function was defined here in
-# the plugin, before being pulled in to core lib/git.zsh as git_current_branch()
-# to fix the core -> git plugin dependency.
-function current_branch() {
-  git_current_branch
+# Outputs the name of the current branch. Used by aliases like gpsup, ggu, ggl.
+# Usage example: git pull origin $(git_current_branch)
+# Using '--quiet' with 'symbolic-ref' will not cause a fatal error (128) if
+# it's not a symbolic ref, but in a Git repo.
+function git_current_branch() {
+  local ref
+  ref=$(__git_prompt_git symbolic-ref --quiet HEAD 2> /dev/null)
+  local ret=$?
+  if [[ $ret != 0 ]]; then
+    [[ $ret == 128 ]] && return  # no git repo.
+    ref=$(__git_prompt_git rev-parse --short HEAD 2> /dev/null) || return
+  fi
+  echo ${ref#refs/heads/}
 }
 
 # Check for develop and similarly named branches
@@ -412,20 +423,3 @@ alias gk='\gitk --all --branches &!'
 alias gke='\gitk --all $(git log --walk-reflogs --pretty=%h) &!'
 
 unset git_version
-
-# Logic for adding warnings on deprecated aliases
-local old_alias new_alias
-for old_alias new_alias (
-  # TODO(2023-10-19): remove deprecated `git pull --rebase` aliases
-  gup     gpr
-  gupv    gprv
-  gupa    gpra
-  gupav   gprav
-  gupom   gprom
-  gupomi  gpromi
-); do
-  aliases[$old_alias]="
-    print -Pu2 \"%F{yellow}[oh-my-zsh] '%F{red}${old_alias}%F{yellow}' is a deprecated alias, using '%F{green}${new_alias}%F{yellow}' instead.%f\"
-    $new_alias"
-done
-unset old_alias new_alias

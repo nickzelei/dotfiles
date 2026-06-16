@@ -79,8 +79,6 @@ export GPG_TTY=$(tty)
 source "$ZSHRC_CONFIG_DIR/aliases/aliases.zsh"
 source "$ZSHRC_CONFIG_DIR/etc.zsh"
 
-source "$ZSHRC_CONFIG_DIR/lib/git.zsh"
-
 # Plugins
 
 source "$ZSHRC_CONFIG_DIR/plugins/git/git.plugin.zsh"
