@@ -71,8 +71,12 @@ PS1='%B%{$fg[green]%}${vcs_info_msg_0_}%{$reset_color%} ➜ %b'
 # Exported so the sub-files sourced below can reference it too.
 export ZSHRC_CONFIG_DIR="${${(%):-%x}:A:h}"
 
+# Interactive-only environment. Tells gpg which terminal to prompt on; $(tty) is
+# meaningless (and forks a process) in non-interactive shells, so this stays out
+# of env.zsh. Order-independent env lives in env.zsh, ordered PATH in profile.zsh.
+export GPG_TTY=$(tty)
+
 source "$ZSHRC_CONFIG_DIR/aliases/aliases.zsh"
-source "$ZSHRC_CONFIG_DIR/envvars.zsh"
 source "$ZSHRC_CONFIG_DIR/etc.zsh"
 
 source "$ZSHRC_CONFIG_DIR/lib/git.zsh"

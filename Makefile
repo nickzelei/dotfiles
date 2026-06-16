@@ -15,11 +15,11 @@ bench: ## Benchmark zsh init time (appends a row to bench/results.md)
 profile: ## Show a per-component init profile (what's slow)
 	@ZSH_PROFILE=1 zsh -i -c exit
 
-install: ## Install brew deps, then symlink the config and wire up ~/.zshrc
+install: ## Install brew deps, then symlink the config and wire up zsh startup files
 	brew bundle
 	./install.sh
 
-stow: ## Symlink the config into $HOME and wire ~/.zshrc (no brew deps)
+stow: ## Symlink the config into $HOME and wire zsh startup files (no brew deps)
 	./install.sh
 
 update: ## Update plugin submodules to their latest upstream

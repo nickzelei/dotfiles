@@ -56,14 +56,27 @@ else
   done
 fi
 
-# Wire the config into ~/.zshrc (guarded so the shell still starts if the repo
-# is ever moved or removed). Idempotent: only appends if not already present.
-zshrc="$HOME/.zshrc"
-if [ ! -f "$zshrc" ] || ! grep -qF 'config/zsh/setup.zsh' "$zshrc"; then
-  printf '\n[[ -f ~/.config/zsh/setup.zsh ]] && source ~/.config/zsh/setup.zsh\n' >> "$zshrc"
-  echo "Added source line to $zshrc."
-else
-  echo "$zshrc already sources the config; left it alone."
-fi
+# Wire a tracked config file into a home startup file with a guarded source line
+# (so the shell still starts if the repo is moved/removed). Idempotent: only
+# appends if absent. Appends to the END so it runs after any tool-generated lines
+# already in the home file (Homebrew shellenv, rustup's cargo env, OrbStack).
+#
+# The split mirrors zsh's startup model so non-interactive shells get the env too:
+#   ~/.zshenv   <- env.zsh     (every invocation: PATH, exported env)
+#   ~/.zprofile <- profile.zsh (login shells: PATH ordered after Homebrew)
+#   ~/.zshrc    <- setup.zsh   (interactive: prompt, plugins, keybindings)
+wire() {
+  home_file="$1"; tracked="$2"
+  if [ ! -f "$home_file" ] || ! grep -qF "config/zsh/$tracked" "$home_file"; then
+    printf '\n[[ -f ~/.config/zsh/%s ]] && source ~/.config/zsh/%s\n' "$tracked" "$tracked" >> "$home_file"
+    echo "Wired $tracked into $home_file."
+  else
+    echo "$home_file already sources $tracked; left it alone."
+  fi
+}
+
+wire "$HOME/.zshenv"   env.zsh
+wire "$HOME/.zprofile" profile.zsh
+wire "$HOME/.zshrc"    setup.zsh
 
 echo "Done. Open a new shell (or 'exec zsh') to pick up the config."

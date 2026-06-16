@@ -12,7 +12,7 @@ the repo). `~/dotfiles` is the convention and matches where Ona clones it:
 ```console
 git clone --recurse-submodules <url> ~/dotfiles
 cd ~/dotfiles
-make install   # brew deps + symlink + wire up ~/.zshrc
+make install   # brew deps + symlink + wire up zsh startup files
 ```
 
 `make install` runs `brew bundle` then `./install.sh`. If you just want the
@@ -31,14 +31,25 @@ package whose contents mirror `$HOME`. The `zsh` package contains
 ```
 
 `install.sh` discovers every package under `packages/` automatically (no
-hardcoded list) and appends a guarded source line to `~/.zshrc`:
+hardcoded list) and appends a guarded source line to each of zsh's startup
+files, mirroring zsh's startup model so non-interactive shells get the env too:
 
 ```console
-[[ -f ~/.config/zsh/setup.zsh ]] && source ~/.config/zsh/setup.zsh
+~/.zshenv   <- [[ -f ~/.config/zsh/env.zsh ]]     && source ~/.config/zsh/env.zsh
+~/.zprofile <- [[ -f ~/.config/zsh/profile.zsh ]] && source ~/.config/zsh/profile.zsh
+~/.zshrc    <- [[ -f ~/.config/zsh/setup.zsh ]]   && source ~/.config/zsh/setup.zsh
 ```
 
-The `[[ -f ... ]]` guard means your shell still starts cleanly if the repo is
-ever moved or removed, instead of erroring on every prompt.
+`env.zsh` runs for **every** invocation (interactive shells, scripts,
+`ssh host 'cmd'`, cron), so order-independent `$PATH` and exported env live
+there. `profile.zsh` runs for login shells after Homebrew's `shellenv`, for the
+few `$PATH` entries whose order relative to Homebrew matters (e.g. openssl).
+`setup.zsh` is interactive-only: prompt, plugins, keybindings.
+
+The lines are appended to the *end* of each home file, so they run after any
+tool-generated lines already there (Homebrew `shellenv`, rustup's cargo env,
+OrbStack). The `[[ -f ... ]]` guard means your shell still starts cleanly if the
+repo is ever moved or removed, instead of erroring on every prompt.
 
 If `stow` isn't installed (e.g. a minimal image), `install.sh` doesn't try to
 install it — it falls back to linking the `zsh` package directly with `ln -s`
@@ -68,7 +79,7 @@ point it at this repo's Git URL. On environment startup Ona clones it to
 `~/dotfiles` and runs `install.sh` (the first script it finds, ahead of
 `bootstrap`/`setup`). The script is non-interactive and self-contained, so it
 works in Ona's no-TTY startup without hanging. Brew deps are skipped there —
-`install.sh` only does the symlink + submodules + `~/.zshrc` wiring, and the
+`install.sh` only does the symlink + submodules + startup-file wiring, and the
 config degrades gracefully when tools like `zoxide`/`fzf` aren't present.
 
 It doesn't assume `stow` is on the image: if it's missing, `install.sh` links
@@ -87,7 +98,7 @@ simple, fast, and easy to move between machines.
 
 Repo root holds tooling that is *not* symlinked into `$HOME`:
 
-- `install.sh` — symlinks packages into `$HOME` and wires `~/.zshrc` (idempotent).
+- `install.sh` — symlinks packages into `$HOME` and wires zsh's startup files (idempotent).
 - `Brewfile` — brew deps (`fzf`, `fd`, `ripgrep`, `stow`, `zoxide`, `mise`, …).
 - `Makefile` — maintenance commands; run `make` to list them.
 - `bench/` — init benchmark script and its results log.
@@ -95,8 +106,9 @@ Repo root holds tooling that is *not* symlinked into `$HOME`:
 Stow packages live under `packages/` (their contents get symlinked into `$HOME`):
 
 - `packages/zsh/.config/zsh/` — the whole zsh config, symlinked to `~/.config/zsh`:
-  - `setup.zsh` — entrypoint; prompt, history, keybindings, and sources the rest.
-  - `envvars.zsh` — environment variables and `$PATH` setup.
+  - `env.zsh` — sourced from `~/.zshenv` (every shell); `$PATH` and exported env.
+  - `profile.zsh` — sourced from `~/.zprofile` (login shells); `$PATH` ordered after Homebrew.
+  - `setup.zsh` — sourced from `~/.zshrc` (interactive); prompt, history, keybindings, and sources the rest.
   - `aliases/` — aliases and directory shortcuts.
   - `etc.zsh` — wires up CLI tools (`zoxide`, `mise`, `fzf`).
   - `lib/git.zsh` — git helper functions.
@@ -111,8 +123,8 @@ Run `make` (no args) in the repo to see everything:
 
 ```console
 make          # list commands
-make install  # brew deps + symlink + wire up ~/.zshrc
-make stow     # symlink + wire up ~/.zshrc (no brew)
+make install  # brew deps + symlink + wire up zsh startup files
+make stow     # symlink + wire up zsh startup files (no brew)
 make bench    # benchmark zsh init time, log to bench/results.md
 make profile  # per-component init profile (what's slow)
 make update   # update plugin submodules
