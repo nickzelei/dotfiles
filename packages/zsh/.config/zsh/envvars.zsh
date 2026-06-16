@@ -4,7 +4,6 @@
 typeset -U path PATH
 
 # Go
-# export GOPRIVATE=github.com/nucleuscloud/*
 export PATH="$PATH:$HOME/go/bin"
 
 # AWS
