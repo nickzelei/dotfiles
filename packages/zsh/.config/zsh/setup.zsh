@@ -51,10 +51,6 @@ bindkey '^[[B' down-line-or-beginning-search  # Down arrow for history search
 # "freezing" the terminal (resumable only via Ctrl-Q).
 stty -ixon
 
-alias ls='ls --color=auto'
-alias ll='ls -lah'
-alias grep='grep --color=auto'
-
 # Git integration in prompt
 autoload -Uz vcs_info # Load version control info
 add-zsh-hook precmd vcs_info # Update vcs_info before each command

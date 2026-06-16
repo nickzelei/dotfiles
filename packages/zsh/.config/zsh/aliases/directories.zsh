@@ -34,6 +34,11 @@ function d () {
 }
 compdef _dirs d
 
+# Colorize ls/grep. The ls family below expands the `ls` alias recursively, so
+# they all inherit --color too.
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+
 # List directory contents
 alias lsa='ls -lah'
 alias l='ls -lah'
