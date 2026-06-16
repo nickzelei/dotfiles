@@ -100,9 +100,10 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
   - `aliases/` — aliases and directory shortcuts.
   - `etc.zsh` — wires up CLI tools (`zoxide`, `mise`, `fzf`).
   - `lib/git.zsh` — git helper functions.
-  - `mise/config.toml` — global [mise](https://mise.jdx.dev) tool config, pointed
-    at via `MISE_GLOBAL_CONFIG_FILE` so the tool baseline is tracked in the repo.
   - `plugins/` — the vendored `git` plugin plus zsh plugin submodules.
+- `packages/mise/.config/mise/config.toml` — global [mise](https://mise.jdx.dev)
+  tool config, symlinked to mise's default `~/.config/mise/config.toml` so the
+  tool baseline is tracked in the repo.
 
 ## Commands
 
