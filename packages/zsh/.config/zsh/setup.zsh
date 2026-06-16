@@ -27,8 +27,8 @@ zstyle ':completion:*' menu select # Enable menu selection for completion
 autoload -Uz add-zsh-hook
 
 HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=100000
+SAVEHIST=100000
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
