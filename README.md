@@ -7,7 +7,7 @@ their own stow packages.
 ## Install
 
 Clone anywhere except `~/.config/zsh` itself (that path becomes a symlink into
-the repo). `~/dotfiles` is the convention and matches where Ona clones it:
+the repo).
 
 ```console
 git clone --recurse-submodules <url> ~/dotfiles
@@ -71,22 +71,6 @@ Mirror the *full* path under `$HOME` inside the package, e.g.
 `packages/ghostty/.config/ghostty/config` → `~/.config/ghostty/config`. Move
 (don't copy) the original — stow refuses to clobber a real file that's still in
 place, which is its way of telling you to move it into the package first.
-
-## Ona
-
-Ona [supports dotfiles](https://ona.com/docs/ona/configuration/dotfiles/overview):
-point it at this repo's Git URL. On environment startup Ona clones it to
-`~/dotfiles` and runs `install.sh` (the first script it finds, ahead of
-`bootstrap`/`setup`). The script is non-interactive and self-contained, so it
-works in Ona's no-TTY startup without hanging. Brew deps are skipped there —
-`install.sh` only does the symlink + submodules + startup-file wiring, and the
-config degrades gracefully when tools like `zoxide`/`fzf` aren't present.
-
-It doesn't assume `stow` is on the image: if it's missing, `install.sh` links
-the `zsh` package directly so the shell still comes up. Most non-shell packages
-(ghostty, other GUI configs) are laptop-only and irrelevant in a remote env
-anyway; for ones that do matter there (git, tmux), make sure `stow` is available
-in the image.
 
 ## Motivation
 
