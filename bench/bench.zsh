@@ -2,7 +2,7 @@
 #
 # Benchmark zsh interactive startup time and log the result over time.
 #
-# Measures `zsh -i -c exit` — a full interactive init that sources setup.zsh and
+# Measures `zsh -i -c true` — a full interactive init that sources setup.zsh and
 # exits immediately. Lower is better. Uses hyperfine for warmups + statistics,
 # so it's the shell-init equivalent of `go test -bench`.
 #
@@ -35,10 +35,12 @@ stamp="$(date '+%Y-%m-%d %H:%M')"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 
-# --shell=none: run `zsh -i -c exit` directly instead of via an extra wrapper
+# --shell=none: run `zsh -i -c true` directly instead of via an extra wrapper
 # shell. --warmup primes the filesystem/compinit caches so we measure
-# steady-state init rather than a cold first run.
-hyperfine --warmup 3 --shell=none --export-markdown "$tmp" 'zsh -i -c exit'
+# steady-state init rather than a cold first run. Run `true` (not `exit`) so the
+# measured command's status is deterministically 0 and doesn't depend on whatever
+# the rc's last statement happens to leave in $?.
+hyperfine --warmup 3 --shell=none --export-markdown "$tmp" 'zsh -i -c true'
 
 (( log )) || exit 0
 

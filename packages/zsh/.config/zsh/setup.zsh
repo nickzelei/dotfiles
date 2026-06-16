@@ -106,5 +106,8 @@ fi
 function _set_terminal_title() { print -Pn "\e]0;%1~\a" }
 add-zsh-hook precmd _set_terminal_title
 
-# Profiling output (see the zmodload at the top). Keep this last.
-[[ -n "$ZSH_PROFILE" ]] && zprof
+# Profiling output (see the zmodload at the top). Keep this last. Use an `if`
+# rather than `[[ ... ]] && zprof`: a false `&&` would make startup exit non-zero
+# (it's the last statement), which leaks into the first prompt's $? and breaks
+# `zsh -i -c exit` (the bench harness). An `if` with no else returns 0 when false.
+if [[ -n "$ZSH_PROFILE" ]]; then zprof; fi
