@@ -1,0 +1,7 @@
+font-family = "JetBrainsMono Nerd Font Mono"
+cursor-style-blink = false
+shell-integration-features = no-cursor
+cursor-style = block
+theme = dark:Catppuccin Frappe,light:Catppuccin Latte
+keybind = shift+enter=text:\x1b\r
+
