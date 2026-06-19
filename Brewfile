@@ -13,6 +13,9 @@ brew "gh"
 brew "lazygit"
 brew "hyperfine" # statistical benchmarking; used by bench/bench.zsh
 brew "stow" # symlink farm manager; install.sh uses it to link configs into $HOME
+brew "neovim" # editor; config lives in the nvim stow package
+brew "luarocks" # Lua package manager; some nvim plugins need it
 
 cask "ghostty"
 cask "music-decoy" # https://lowtechguys.com/musicdecoy/
+cask "font-jetbrains-mono-nerd-font" # nerd font for nvim/terminal glyphs

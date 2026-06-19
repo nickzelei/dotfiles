@@ -100,6 +100,9 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
 - `packages/mise/.config/mise/config.toml` — global [mise](https://mise.jdx.dev)
   tool config, symlinked to mise's default `~/.config/mise/config.toml` so the
   tool baseline is tracked in the repo.
+- `packages/nvim/.config/nvim/` — [LazyVim](https://www.lazyvim.org)-based
+  Neovim config, symlinked to `~/.config/nvim`. Brew deps (`neovim`, `luarocks`,
+  the nerd font) live in the root `Brewfile`.
 
 ## Commands
 
