@@ -1,0 +1,18 @@
+[user]
+	name = Nick Z
+	email = 2420177+nickzelei@users.noreply.github.com
+
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+
+[init]
+	defaultBranch = main
+
+# Machine-local settings: GPG signing key, gpgsign, alt-identity SSH host
+# rewrites, and per-directory includeIf identities. Kept out of the repo because
+# they reference keys/paths that only exist on a given machine — a fresh machine
+# has no config.local, so commits work without a key (degrade, don't fail). Drop
+# the file in once the key is imported and signing turns on automatically. git
+# silently ignores a missing include path.
+[include]
+	path = ~/.config/git/config.local
