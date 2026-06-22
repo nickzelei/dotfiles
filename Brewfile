@@ -4,9 +4,6 @@ brew "ripgrep" # fast grep replacement (rg)
 brew "fzf-tab" # replaces zsh tab-completion menu with an fzf picker
 brew "zoxide" # shell ext. to jump to frequently used dirs (modern autojump)
 brew "git"
-brew "gnupg"
-brew "pinentry-mac" # Pinentry for GPG on Mac
-brew "openssl@3"
 brew "mise"
 brew "bat"
 brew "gh"
