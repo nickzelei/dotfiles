@@ -1,6 +1,13 @@
 [user]
 	name = Nick Z
 	email = 2420177+nickzelei@users.noreply.github.com
+	signingkey = /Users/nick/.ssh/id_ed25519.pub
+
+[gpg]
+	format = ssh
+
+[commit]
+	gpgsign = true
 
 [url "git@github.com:"]
 	insteadOf = https://github.com/
