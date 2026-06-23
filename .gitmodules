@@ -4,3 +4,7 @@
 [submodule "plugins/zsh-syntax-highlighting"]
 	path = packages/zsh/.config/zsh/plugins/zsh-syntax-highlighting
 	url = https://github.com/zsh-users/zsh-syntax-highlighting.git
+[submodule "work"]
+	path = packages/work/.config/zsh-local
+	url = git@github.com:nickzelei/zsh-work-config.git
+	update = none
