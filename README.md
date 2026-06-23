@@ -100,6 +100,14 @@ DOTFILES_ENABLE=work ./install.sh   # or: make install-work
 Because the hooks only care about the path, you can also clone or symlink any
 overlay straight to `~/.config/zsh-local` and it loads the same way.
 
+To turn the overlay off on a machine that previously enabled it, unstow the
+package explicitly (a plain `./install.sh` only restows the packages it stows,
+so it leaves an already-linked optional package in place):
+
+```console
+stow --dir=packages --target="$HOME" --delete work
+```
+
 ## Motivation
 
 I previously used oh-my-zsh, but found it was slowing down my shell init.
