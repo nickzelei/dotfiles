@@ -2,7 +2,7 @@
 # them. Targets are self-documenting via the `## ` comments below.
 
 .DEFAULT_GOAL := help
-.PHONY: help bench profile install stow update
+.PHONY: help bench profile install install-work stow update
 
 help: ## List available commands
 	@echo "Usage: make <target>\n"
@@ -21,6 +21,9 @@ install: ## Install brew deps, then symlink the config and wire up zsh startup f
 
 stow: ## Symlink the config into $HOME and wire zsh startup files (no brew deps)
 	./install.sh
+
+install-work: ## Symlink config incl. the work overlay (DOTFILES_ENABLE=work)
+	DOTFILES_ENABLE=work ./install.sh
 
 update: ## Update plugin submodules to their latest upstream
 	git submodule update --remote --merge

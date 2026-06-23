@@ -72,6 +72,42 @@ Mirror the *full* path under `$HOME` inside the package, e.g.
 (don't copy) the original — stow refuses to clobber a real file that's still in
 place, which is its way of telling you to move it into the package first.
 
+### Machine-local overlays (e.g. work)
+
+Each of the three zsh startup files ends with a guarded source of a machine-local
+overlay, so config that only belongs on *some* machines lives outside this repo's
+history but still loads cleanly:
+
+```console
+[[ -f ~/.config/zsh-local/env.zsh ]]     && source ~/.config/zsh-local/env.zsh
+[[ -f ~/.config/zsh-local/profile.zsh ]] && source ~/.config/zsh-local/profile.zsh
+[[ -f ~/.config/zsh-local/setup.zsh ]]   && source ~/.config/zsh-local/setup.zsh
+```
+
+Nothing there on most machines, so the guards no-op. My work config is a separate
+private repo wired in as an *optional* package: `packages/work` carries a
+`.optional` marker and a submodule (with `update = none`, so it's never cloned by
+default) at `packages/work/.config/zsh-local`, which stows to `~/.config/zsh-local`.
+
+Optional packages are stowed only when named in the `DOTFILES_ENABLE` env var
+(space/comma-separated). So a personal machine ignores `work` entirely — never
+cloned, never stowed, never an error — while a work machine opts in:
+
+```console
+DOTFILES_ENABLE=work ./install.sh   # or: make install-work
+```
+
+Because the hooks only care about the path, you can also clone or symlink any
+overlay straight to `~/.config/zsh-local` and it loads the same way.
+
+To turn the overlay off on a machine that previously enabled it, unstow the
+package explicitly (a plain `./install.sh` only restows the packages it stows,
+so it leaves an already-linked optional package in place):
+
+```console
+stow --dir=packages --target="$HOME" --delete work
+```
+
 ## Motivation
 
 I previously used oh-my-zsh, but found it was slowing down my shell init.

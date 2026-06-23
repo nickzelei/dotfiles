@@ -100,6 +100,11 @@ fi
 function _set_terminal_title() { print -Pn "\e]0;%1~\a" }
 add-zsh-hook precmd _set_terminal_title
 
+# Machine-local overlay, interactive scope (e.g. work-only aliases and tool
+# wiring). Sourced last so it can extend or override the base; absent on
+# machines without an overlay, so this no-ops.
+[[ -f ~/.config/zsh-local/setup.zsh ]] && source ~/.config/zsh-local/setup.zsh
+
 # Profiling output (see the zmodload at the top). Keep this last. Use an `if`
 # rather than `[[ ... ]] && zprof`: a false `&&` would make startup exit non-zero
 # (it's the last statement), which leaks into the first prompt's $? and breaks

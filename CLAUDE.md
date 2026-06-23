@@ -32,8 +32,11 @@ When adding shell config, put it in the file matching its scope. Lines are appen
 
 **Plugins are git submodules.** `zsh-autosuggestions` and `zsh-syntax-highlighting` live under `packages/zsh/.config/zsh/plugins/` as submodules (see `.gitmodules`), conditionally sourced in `setup.zsh`. `fzf-tab` is installed via Homebrew (`Brewfile`) instead. `install.sh` runs `git submodule update --init --recursive`; `make update` bumps them to upstream.
 
+**Machine-local overlays (optional packages).** Each of the three zsh base files ends with a guarded `[[ -f ~/.config/zsh-local/<scope>.zsh ]] && source ...`, so a machine-local overlay at `~/.config/zsh-local` is sourced in the matching scope and absent overlays no-op. A package is **optional** if it contains a `.optional` marker at its root; `install.sh` stows optional packages only when their name appears in the `DOTFILES_ENABLE` env var (space/comma-separated). The work overlay is such a package: `packages/work/.config/zsh-local` is the private `zsh-work-config` repo as a submodule with `update = none` (so the blanket submodule init skips it), stowing to `~/.config/zsh-local`. Enable it with `DOTFILES_ENABLE=work ./install.sh` or `make install-work`. The `.optional` marker is kept out of `$HOME` via stow's `--ignore`.
+
 ## Conventions
 
 - `install.sh` must stay idempotent — `wire()` greps before appending; stow uses `--restow`.
 - Brew dependencies belong in `Brewfile`, not in any script.
 - When tracking a new config, **move** (not copy) the original out of `$HOME` — stow refuses to clobber a real file in place.
+- Optional packages carry a `.optional` marker and a submodule with `update = none`; never stow or clone them unless `DOTFILES_ENABLE` names them. Keep the no-hardcoded-list rule: discover by glob + marker, not by name in the script.
