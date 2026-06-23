@@ -39,10 +39,35 @@ fi
 [ -L "$zdir" ] && rm -f "$zdir"
 
 if command -v stow >/dev/null 2>&1; then
-  # Discover and stow every package under packages/ — no hardcoded list.
+  # Which optional packages to enable on this machine. DOTFILES_ENABLE is a
+  # space- or comma-separated list of package names; empty/unset enables none.
+  # Wrapped in spaces so the `case` glob below can match whole names.
+  enabled=" ${DOTFILES_ENABLE:-} "
+  enabled="${enabled//,/ }"
+
+  # Discover every package under packages/ — still no hardcoded list. A package
+  # is OPTIONAL if it contains a `.optional` marker; those are stowed only when
+  # named in DOTFILES_ENABLE. An enabled optional package may be backed by a
+  # submodule with `update = none` (so the blanket init above skipped it), so we
+  # init just that path on demand. Non-optional packages behave exactly as before.
   names=()
-  for p in "$PKG_DIR"/*/; do names+=("$(basename "$p")"); done
-  stow --restow --dir="$PKG_DIR" --target="$HOME" "${names[@]}"
+  for p in "$PKG_DIR"/*/; do
+    name="$(basename "$p")"
+    if [ -f "$p/.optional" ]; then
+      case "$enabled" in
+        *" $name "*) ;;  # enabled: fall through to init + stow
+        *) echo "skipping optional package: $name (not in DOTFILES_ENABLE)"; continue ;;
+      esac
+      if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
+        git submodule update --init --recursive -- "packages/$name" \
+          || echo "warning: could not init submodule for $name; continuing without it" >&2
+      fi
+    fi
+    names+=("$name")
+  done
+
+  # --ignore the marker so `packages/<opt>/.optional` is never linked into $HOME.
+  stow --restow --ignore='\.optional' --dir="$PKG_DIR" --target="$HOME" "${names[@]}"
 else
   # No stow (e.g. a minimal Ona image). We deliberately DON'T try to install it
   # — that's the fragile, cross-distro part. Instead guarantee the one thing
