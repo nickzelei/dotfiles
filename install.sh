@@ -59,7 +59,12 @@ if command -v stow >/dev/null 2>&1; then
         *) echo "skipping optional package: $name (not in DOTFILES_ENABLE)"; continue ;;
       esac
       if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
-        git submodule update --init --recursive -- "packages/$name" \
+        # --checkout forces the clone even though the submodule is declared
+        # `update = none` in .gitmodules (which is what keeps the blanket init
+        # above from fetching it on machines that don't opt in). Without it,
+        # `git submodule update --init` just prints "Skipping submodule" and
+        # leaves the path empty, so an enabled overlay would never materialize.
+        git submodule update --init --checkout --recursive -- "packages/$name" \
           || echo "warning: could not init submodule for $name; continuing without it" >&2
       fi
     fi
