@@ -20,3 +20,8 @@ export AWS_DEFAULT_REGION=us-west-2
 export AWS_PAGER=""
 
 export LESS="-R" # adding -X will prevent the pager from clearing
+
+# Machine-local overlay (e.g. a work-only layer), sourced for every shell if
+# present. Absent on machines without an overlay, so this no-ops. Delivered by
+# the optional `work` stow package -> ~/.config/zsh-local.
+[[ -f ~/.config/zsh-local/env.zsh ]] && source ~/.config/zsh-local/env.zsh
