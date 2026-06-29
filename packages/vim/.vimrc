@@ -4,6 +4,9 @@ syntax on
 " Show line numbers
 set number
 
+" Set relative numbers elsewhere
+set relativenumber
+
 " Highlight the current line
 " set cursorline
 
