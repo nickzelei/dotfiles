@@ -1,0 +1,5 @@
+# Work-only mise tools. Merged on top of ~/.config/mise/config.toml via mise's
+# conf.d loading. Stowed only when DOTFILES_ENABLE=work (see the `work` package).
+[tools]
+aws-cli = "latest"
+aws-iam-authenticator = "latest"
