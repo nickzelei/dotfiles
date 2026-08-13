@@ -34,6 +34,16 @@ fi
 if command -v stow >/dev/null 2>&1; then
   # Which optional packages to enable on this machine. DOTFILES_ENABLE is a
   # space- or comma-separated list of package names; empty/unset enables none.
+  #
+  # Coder workspaces are work machines, so default to the work overlay there and
+  # keep the devbox zero-config. This is the ONE place a package name is written
+  # down (the discovery loop below stays name-agnostic); an explicit
+  # DOTFILES_ENABLE always wins, including `DOTFILES_ENABLE=` to opt back out.
+  if [ -z "${DOTFILES_ENABLE+x}" ] && [ "${CODER:-}" = "true" ]; then
+    DOTFILES_ENABLE=work
+    echo "CODER=true and DOTFILES_ENABLE unset — enabling: $DOTFILES_ENABLE"
+  fi
+
   # Wrapped in spaces so the `case` glob below can match whole names.
   enabled=" ${DOTFILES_ENABLE:-} "
   enabled="${enabled//,/ }"
@@ -41,8 +51,8 @@ if command -v stow >/dev/null 2>&1; then
   # Discover every package under packages/ — still no hardcoded list. A package
   # is OPTIONAL if it contains a `.optional` marker; those are stowed only when
   # named in DOTFILES_ENABLE. An enabled optional package may be backed by a
-  # submodule with `update = none` (so the blanket init above skipped it), so we
-  # init just that path on demand. Non-optional packages behave exactly as before.
+  # submodule with `update = none`, so we init just that path on demand.
+  # Non-optional packages behave exactly as before.
   names=()
   for p in "$PKG_DIR"/*/; do
     name="$(basename "$p")"

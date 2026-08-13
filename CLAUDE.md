@@ -35,6 +35,8 @@ When adding shell config, put it in the file matching its scope. Lines are appen
 
 **Optional packages.** A package is **optional** if it contains a `.optional` marker at its root; `install.sh` stows optional packages only when their name appears in the `DOTFILES_ENABLE` env var (space/comma-separated). The work overlay is such a package: `packages/work/.config/zsh-local` is the private `zsh-work-config` repo as a submodule with `update = none` (so it's never cloned unless opted in), stowing to `~/.config/zsh-local`; `install.sh` forces it with `--checkout` when enabled. `packages/work` also ships a `mise/conf.d/work.toml` that layers on the base mise config. Enable with `DOTFILES_ENABLE=work ./install.sh` or `make install-work`. The `.optional` marker is kept out of `$HOME` via stow's `--ignore`.
 
+**The one hardcoded package name.** `install.sh` defaults `DOTFILES_ENABLE=work` when `CODER=true` and the var is *unset*, so Coder devboxes need no configuration. This is a deliberate, single-line exception to the no-hardcoded-names rule and it is scoped to activation only — the discovery loop below it stays name-agnostic. Don't extend it into a lookup table of packages, and don't "fix" it by putting names in the loop. The unset-vs-empty distinction (`${VAR+x}`) is load-bearing: `DOTFILES_ENABLE=` must be able to opt a workspace out.
+
 ## Conventions
 
 - `install.sh` must stay idempotent — `wire()` greps before appending; stow uses `--restow`.

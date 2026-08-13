@@ -109,6 +109,18 @@ cloned, never stowed, never an error — while a work machine opts in:
 DOTFILES_ENABLE=work ./install.sh   # or: make install-work
 ```
 
+On a **Coder workspace** you don't need to set anything: `install.sh` enables the
+work overlay automatically when `CODER=true`, so pointing Coder's dotfiles module
+at this repo is the whole setup. An explicit `DOTFILES_ENABLE` still wins, and
+`DOTFILES_ENABLE=` (empty) opts a workspace back out.
+
+The overlay is a private repo cloned over SSH, so the workspace needs an SSH key
+on your GitHub account. Without one the clone fails soft — `install.sh` warns and
+continues, and you get the base config without the overlay. Note that
+`.gitconfig`'s `[url "git@github.com:"] insteadOf = https://github.com/` rewrites
+HTTPS to SSH, so a token-based HTTPS clone won't work as a fallback unless you
+move that rewrite into the local hatch.
+
 Because the hooks only care about the path, you can also clone or symlink any
 overlay straight to `~/.config/zsh-local` and it loads the same way.
 
