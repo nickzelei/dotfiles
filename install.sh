@@ -21,6 +21,16 @@ cd "$REPO_DIR"
 
 mkdir -p "$HOME/.config"
 
+# Keep ~/.config occupied by something stow doesn't own. Stow's unstow pass (which
+# --restow runs first) deletes a target directory once it's empty, so on a $HOME
+# where ~/.config holds nothing but stowed symlinks it RMDIRs the directory, tries
+# to fold ~/.config itself into whichever package it reaches next, then aborts the
+# whole run with "unstow_contents() called with invalid target: .config" — before
+# any of the wiring below happens. A real subdirectory prevents both the RMDIR and
+# the fold. git/ is the natural resident: no package owns it and .gitconfig already
+# includes ~/.config/git/config.local from there.
+mkdir -p "$HOME/.config/git"
+
 # If ~/.config/zsh already exists as a real directory (not a symlink), bail
 # loudly instead of nesting a link inside it. A stale symlink (ours, maybe
 # pointing at an old path) is fine — we drop it below before relinking.
@@ -29,7 +39,13 @@ if [ -e "$zdir" ] && [ ! -L "$zdir" ]; then
   echo "error: $zdir exists and is not a symlink. Move or remove it, then re-run." >&2
   exit 1
 fi
-[ -L "$zdir" ] && rm -f "$zdir"
+
+# Drop the link only if it's stale (dangling, or pointing at an older repo path);
+# stow relinks it below. -ef compares device+inode through the link, so a dangling
+# link counts as stale. A correct link is left alone rather than churned.
+if [ -L "$zdir" ] && [ ! "$zdir/setup.zsh" -ef "$PKG_DIR/zsh/.config/zsh/setup.zsh" ]; then
+  rm -f "$zdir"
+fi
 
 # Clone an optional package's submodule. `--checkout` forces it even though the
 # submodule is declared `update = none` in .gitmodules (which is what keeps it
