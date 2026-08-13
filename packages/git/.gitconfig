@@ -9,8 +9,13 @@
 [commit]
 	gpgsign = true
 
+# Push over SSH, fetch over HTTPS. Deliberately pushInsteadOf and NOT insteadOf:
+# a plain insteadOf also rewrites reads, which forces an SSH key onto anonymous
+# public clones, every brew tap fetch, and any tool handed an https GitHub URL
+# (CI, containers, Coder devboxes). Reads work via the osxkeychain helper or an
+# injected token; only pushes need the key.
 [url "git@github.com:"]
-	insteadOf = https://github.com/
+	pushInsteadOf = https://github.com/
 
 [init]
 	defaultBranch = main

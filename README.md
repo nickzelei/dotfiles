@@ -114,12 +114,14 @@ work overlay automatically when `CODER=true`, so pointing Coder's dotfiles modul
 at this repo is the whole setup. An explicit `DOTFILES_ENABLE` still wins, and
 `DOTFILES_ENABLE=` (empty) opts a workspace back out.
 
-The overlay is a private repo cloned over SSH, so the workspace needs an SSH key
-on your GitHub account. Without one the clone fails soft — `install.sh` warns and
-continues, and you get the base config without the overlay. Note that
-`.gitconfig`'s `[url "git@github.com:"] insteadOf = https://github.com/` rewrites
-HTTPS to SSH, so a token-based HTTPS clone won't work as a fallback unless you
-move that rewrite into the local hatch.
+The overlay is a private repo and its submodule URL is SSH, so the workspace needs
+an SSH key on your GitHub account. Without one the clone fails soft —
+`install.sh` warns and continues, and you get the base config without the overlay.
+
+If SSH is ever a problem on a devbox, switching the submodule to an HTTPS URL is a
+viable fallback: `.gitconfig` uses `pushInsteadOf` (not `insteadOf`), so HTTPS
+reads are left alone and an injected token or credential helper can authenticate
+them.
 
 Because the hooks only care about the path, you can also clone or symlink any
 overlay straight to `~/.config/zsh-local` and it loads the same way.
