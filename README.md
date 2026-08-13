@@ -124,6 +124,12 @@ provides (Coder's external auth, an injected token) can authenticate them. If bo
 routes fail the clone fails soft — `install.sh` warns and continues, and you get
 the base config without the overlay.
 
+The workspace's login shell has to actually be zsh. A devbox image that hands you
+bash loads none of this (and `source ~/.zshrc` from bash just spews syntax
+errors). `install.sh` says so at the end rather than switching shells for you —
+fix it in the image or template (`chsh -s "$(command -v zsh)"`), since nothing
+`install.sh` writes to `$HOME` can change which shell the terminal starts.
+
 Because the hooks only care about the path, you can also clone or symlink any
 overlay straight to `~/.config/zsh-local` and it loads the same way.
 

@@ -154,3 +154,20 @@ wire "$HOME/.zprofile" profile.zsh
 wire "$HOME/.zshrc"    setup.zsh
 
 echo "Done. Open a new shell (or 'exec zsh') to pick up the config."
+
+# Nothing above loads unless the shell is zsh, and a devbox image often hands you
+# bash instead (a Coder workspace did — `source ~/.zshrc` then feeds zsh syntax to
+# bash and explodes). Say so rather than switching shells behind your back: the
+# durable fix belongs in the image or template, not in $HOME.
+case "${SHELL:-}" in
+*/zsh) ;;
+*)
+  echo
+  echo "notice: \$SHELL is ${SHELL:-unset}, not zsh — none of the above loads in bash." >&2
+  if command -v zsh >/dev/null 2>&1; then
+    echo "  Run 'exec zsh' for this session; set zsh as the login shell to make it stick." >&2
+  else
+    echo "  zsh is not installed on this machine." >&2
+  fi
+  ;;
+esac
