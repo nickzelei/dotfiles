@@ -3,3 +3,4 @@
 [tools]
 aws-cli = "latest"
 aws-iam-authenticator = "latest"
+direnv = "latest"
