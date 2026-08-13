@@ -115,13 +115,14 @@ at this repo is the whole setup. An explicit `DOTFILES_ENABLE` still wins, and
 `DOTFILES_ENABLE=` (empty) opts a workspace back out.
 
 The overlay is a private repo and its submodule URL is SSH, so the workspace needs
-an SSH key on your GitHub account. Without one the clone fails soft —
-`install.sh` warns and continues, and you get the base config without the overlay.
-
-If SSH is ever a problem on a devbox, switching the submodule to an HTTPS URL is a
-viable fallback: `.gitconfig` uses `pushInsteadOf` (not `insteadOf`), so HTTPS
-reads are left alone and an injected token or credential helper can authenticate
-them.
+an SSH key on your GitHub account. Some devboxes can't do SSH at all — a Coder
+workspace has no `ssh` binary, only `coder gitssh`, so the clone dies before it
+reaches GitHub. When the SSH clone fails, `install.sh` retries over HTTPS with a
+per-invocation `insteadOf` rewrite; `.gitconfig` uses `pushInsteadOf` (not
+`insteadOf`), so HTTPS reads are left alone and whatever credential helper the box
+provides (Coder's external auth, an injected token) can authenticate them. If both
+routes fail the clone fails soft — `install.sh` warns and continues, and you get
+the base config without the overlay.
 
 Because the hooks only care about the path, you can also clone or symlink any
 overlay straight to `~/.config/zsh-local` and it loads the same way.

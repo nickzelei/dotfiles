@@ -31,6 +31,52 @@ if [ -e "$zdir" ] && [ ! -L "$zdir" ]; then
 fi
 [ -L "$zdir" ] && rm -f "$zdir"
 
+# Clone an optional package's submodule. `--checkout` forces it even though the
+# submodule is declared `update = none` in .gitmodules (which is what keeps it
+# from being fetched on machines that don't opt in) — without it, `git submodule
+# update --init` just prints "Skipping submodule" and leaves the path empty.
+#
+# Submodule URLs are SSH, and some environments can't use SSH at all: a Coder
+# workspace has no `ssh` binary, only `coder gitssh`, so the clone dies before it
+# reaches GitHub. On failure, retry over HTTPS via a per-invocation insteadOf
+# rewrite (.gitconfig uses pushInsteadOf, so HTTPS reads stay authenticated by
+# whatever credential helper the box provides). The first attempt's output is held
+# back and only printed if the retry fails too, since git's own clone retry is
+# loud and looks alarming when the fallback ends up working.
+init_submodule() {
+  local name="$1" path="packages/$1" log
+  log="$(mktemp "${TMPDIR:-/tmp}/dotfiles.XXXXXX")"
+
+  if git submodule update --init --checkout --recursive -- "$path" >"$log" 2>&1; then
+    rm -f "$log"
+    return 0
+  fi
+
+  local rewrite=() key url hostpath
+  while read -r key url; do
+    case "$url" in
+      git@*:*)
+        hostpath="${url#git@}"
+        rewrite+=(-c "url.https://${hostpath%%:*}/${hostpath#*:}.insteadOf=$url")
+        ;;
+    esac
+  done < <(git config -f .gitmodules --get-regexp '^submodule\..*\.url$' || true)
+
+  # GIT_TERMINAL_PROMPT=0: with no credential helper, HTTPS would otherwise sit
+  # asking for a username, and this script must never block on a prompt.
+  if [ "${#rewrite[@]}" -gt 0 ] \
+    && GIT_TERMINAL_PROMPT=0 git "${rewrite[@]}" \
+      submodule update --init --checkout --recursive -- "$path" >>"$log" 2>&1; then
+    rm -f "$log"
+    echo "note: SSH clone of $name failed; fetched it over HTTPS instead."
+    return 0
+  fi
+
+  cat "$log" >&2
+  rm -f "$log"
+  return 1
+}
+
 if command -v stow >/dev/null 2>&1; then
   # Which optional packages to enable on this machine. DOTFILES_ENABLE is a
   # space- or comma-separated list of package names; empty/unset enables none.
@@ -62,12 +108,7 @@ if command -v stow >/dev/null 2>&1; then
         *) echo "skipping optional package: $name (not in DOTFILES_ENABLE)"; continue ;;
       esac
       if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
-        # --checkout forces the clone even though the submodule is declared
-        # `update = none` in .gitmodules (which is what keeps it from being
-        # fetched on machines that don't opt in). Without it, `git submodule
-        # update --init` just prints "Skipping submodule" and leaves the path
-        # empty, so an enabled overlay would never materialize.
-        git submodule update --init --checkout --recursive -- "packages/$name" \
+        init_submodule "$name" \
           || echo "warning: could not init submodule for $name; continuing without it" >&2
       fi
     fi
