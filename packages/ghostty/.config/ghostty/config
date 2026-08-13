@@ -1,6 +1,6 @@
 font-family = "JetBrainsMono Nerd Font Mono"
 cursor-style-blink = false
-shell-integration-features = no-cursor
+shell-integration-features = no-cursor,ssh-terminfo
 cursor-style = block
 theme = dark:Catppuccin Frappe,light:Catppuccin Latte
 keybind = shift+enter=text:\x1b\r
