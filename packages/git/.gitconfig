@@ -15,11 +15,10 @@
 [init]
 	defaultBranch = main
 
-# Machine-local settings: GPG signing key, gpgsign, alt-identity SSH host
-# rewrites, and per-directory includeIf identities. Kept out of the repo because
-# they reference keys/paths that only exist on a given machine — a fresh machine
-# has no config.local, so commits work without a key (degrade, don't fail). Drop
-# the file in once the key is imported and signing turns on automatically. git
-# silently ignores a missing include path.
+# Untracked per-machine overrides, applied last so they win over everything
+# above. git silently ignores a missing include path, so most machines need no
+# such file. Use it for anything machine-shaped: a different signing key path, an
+# alternate identity (`includeIf "gitdir:~/work/"`), or `gpgsign = false` on a
+# box where the key above isn't present.
 [include]
 	path = ~/.config/git/config.local

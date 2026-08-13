@@ -25,3 +25,8 @@ export LESS="-R" # adding -X will prevent the pager from clearing
 # present. Absent on machines without an overlay, so this no-ops. Delivered by
 # the optional `work` stow package -> ~/.config/zsh-local.
 [[ -f ~/.config/zsh-local/env.zsh ]] && source ~/.config/zsh-local/env.zsh
+
+# Untracked, this-machine-only escape hatch. The overlay above is a stowed
+# package (shared across machines that enable it); this is for one-off local
+# tweaks that belong in no repo.
+[[ -f ~/.zshenv.local ]] && source ~/.zshenv.local

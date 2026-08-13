@@ -79,22 +79,28 @@ source "$ZSHRC_CONFIG_DIR/etc.zsh"
 
 source "$ZSHRC_CONFIG_DIR/plugins/git/git.plugin.zsh"
 
-# fzf-tab (brew): replaces the completion menu with an fzf picker. Must load
-# after compinit/compdef-using plugins but BEFORE zsh-autosuggestions and
-# zsh-syntax-highlighting, since it wraps the completion widget.
-if [[ -f "$HOMEBREW_PREFIX/opt/fzf-tab/share/fzf-tab/fzf-tab.zsh" ]]; then
-  source "$HOMEBREW_PREFIX/opt/fzf-tab/share/fzf-tab/fzf-tab.zsh"
+# Plugins come from the system package manager, which installs them all to
+# <prefix>/share/<name>/<name>.zsh — brew on macOS, apt on Linux. Sources the
+# first path that exists and silently no-ops if the plugin isn't installed, so a
+# box without it still gets a working shell.
+_source_plugin() {
+  local p
+  for p in "$HOMEBREW_PREFIX/share/$1/$1.zsh" "/usr/share/$1/$1.zsh"; do
+    [[ -f "$p" ]] && { source "$p"; return }
+  done
+}
 
-  # Preview directory contents when completing `cd`.
-  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls -la $realpath'
-fi
+# fzf-tab replaces the completion menu with an fzf picker. Must load after
+# compinit but BEFORE autosuggestions/syntax-highlighting, since it wraps the
+# completion widget.
+_source_plugin fzf-tab
+# Preview directory contents when completing `cd`.
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls -la $realpath'
 
-# Must be installed last
-[[ -f "$ZSHRC_CONFIG_DIR/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh" ]] && \
-  source "$ZSHRC_CONFIG_DIR/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh"
-# Must be installed last
-[[ -f "$ZSHRC_CONFIG_DIR/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh" ]] && \
-  source "$ZSHRC_CONFIG_DIR/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh"
+# These two must load last, in this order.
+_source_plugin zsh-autosuggestions
+_source_plugin zsh-syntax-highlighting
+unset -f _source_plugin
 
 # Set the terminal window/tab title to the current directory
 function _set_terminal_title() { print -Pn "\e]0;%1~\a" }
@@ -104,6 +110,9 @@ add-zsh-hook precmd _set_terminal_title
 # wiring). Sourced last so it can extend or override the base; absent on
 # machines without an overlay, so this no-ops.
 [[ -f ~/.config/zsh-local/setup.zsh ]] && source ~/.config/zsh-local/setup.zsh
+
+# Untracked, this-machine-only escape hatch (see env.zsh).
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 # Profiling output (see the zmodload at the top). Keep this last. Use an `if`
 # rather than `[[ ... ]] && zprof`: a false `&&` would make startup exit non-zero

@@ -20,12 +20,6 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_DIR="$REPO_DIR/packages"
 cd "$REPO_DIR"
 
-# Plugins are git submodules; the zsh config sources them, so make sure they're
-# checked out. Skips cleanly if the repo was cloned with --recurse-submodules.
-if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
-  git submodule update --init --recursive
-fi
-
 mkdir -p "$HOME/.config"
 
 # If ~/.config/zsh already exists as a real directory (not a symlink), bail
@@ -60,10 +54,10 @@ if command -v stow >/dev/null 2>&1; then
       esac
       if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
         # --checkout forces the clone even though the submodule is declared
-        # `update = none` in .gitmodules (which is what keeps the blanket init
-        # above from fetching it on machines that don't opt in). Without it,
-        # `git submodule update --init` just prints "Skipping submodule" and
-        # leaves the path empty, so an enabled overlay would never materialize.
+        # `update = none` in .gitmodules (which is what keeps it from being
+        # fetched on machines that don't opt in). Without it, `git submodule
+        # update --init` just prints "Skipping submodule" and leaves the path
+        # empty, so an enabled overlay would never materialize.
         git submodule update --init --checkout --recursive -- "packages/$name" \
           || echo "warning: could not init submodule for $name; continuing without it" >&2
       fi

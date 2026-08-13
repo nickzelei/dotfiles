@@ -10,15 +10,20 @@ Clone anywhere except `~/.config/zsh` itself (that path becomes a symlink into
 the repo).
 
 ```console
-git clone --recurse-submodules <url> ~/dotfiles
+git clone <url> ~/dotfiles
 cd ~/dotfiles
-make install   # brew deps + symlink + wire up zsh startup files
+make install   # deps + symlink + wire up zsh startup files
 ```
 
-`make install` runs `brew bundle` then `./install.sh`. If you just want the
-symlinks without touching brew, run `./install.sh` (or `make stow`) directly.
+`make install` runs `brew bundle` (skipped with a notice if brew isn't
+installed, e.g. on Linux) then `./install.sh`. If you just want the symlinks
+without touching brew, run `./install.sh` (or `make stow`) directly.
 
 Then open a new shell (or `exec zsh`).
+
+Everything in `setup.zsh` is guarded by `command -v` / `[[ -f ]]`, so a machine
+missing some of the Brewfile tools still gets a working shell — it just loses
+that tool's integration. Install what your platform has and move on.
 
 ### How the linking works
 
@@ -72,22 +77,29 @@ Mirror the *full* path under `$HOME` inside the package, e.g.
 (don't copy) the original — stow refuses to clobber a real file that's still in
 place, which is its way of telling you to move it into the package first.
 
-### Machine-local overlays (e.g. work)
+### Two ways to override
 
-Each of the three zsh startup files ends with a guarded source of a machine-local
-overlay, so config that only belongs on *some* machines lives outside this repo's
-history but still loads cleanly:
+Each of the three zsh startup files ends with two guarded sources, in this order:
 
-```console
-[[ -f ~/.config/zsh-local/env.zsh ]]     && source ~/.config/zsh-local/env.zsh
-[[ -f ~/.config/zsh-local/profile.zsh ]] && source ~/.config/zsh-local/profile.zsh
-[[ -f ~/.config/zsh-local/setup.zsh ]]   && source ~/.config/zsh-local/setup.zsh
-```
+1. **The overlay** at `~/.config/zsh-local/<scope>.zsh` — a *shared* layer for
+   config that belongs on a whole class of machines (all my work boxes), tracked
+   in its own repo.
+2. **The local hatch** at `~/.zshrc.local` / `~/.zprofile.local` /
+   `~/.zshenv.local` — untracked, one machine only, in no repo at all.
 
-Nothing there on most machines, so the guards no-op. My work config is a separate
-private repo wired in as an *optional* package: `packages/work` carries a
-`.optional` marker and a submodule (with `update = none`, so it's never cloned by
-default) at `packages/work/.config/zsh-local`, which stows to `~/.config/zsh-local`.
+Both no-op when absent, so most machines use neither. The distinction matters:
+reach for the overlay when a second machine will want the same thing, and the
+hatch when it's a one-off you'd never commit. `.gitconfig` has the same split via
+its `~/.config/git/config.local` include.
+
+### The work overlay
+
+The overlay path is just a path, so anything can fill it. Mine is a separate
+private repo. `packages/work` carries a `.optional` marker and a submodule (with
+`update = none`, so it's never cloned by default) at
+`packages/work/.config/zsh-local`, which stows to `~/.config/zsh-local`. It also
+ships `.config/mise/conf.d/work.toml`, so enabling it layers work-only mise tools
+on top of the base config.
 
 Optional packages are stowed only when named in the `DOTFILES_ENABLE` env var
 (space/comma-separated). So a personal machine ignores `work` entirely — never
@@ -106,6 +118,13 @@ so it leaves an already-linked optional package in place):
 
 ```console
 stow --dir=packages --target="$HOME" --delete work
+```
+
+The overlay is a normal git repo at its stowed path, so update it in place —
+there's no wrapper command for it:
+
+```console
+cd ~/.config/zsh-local && git pull
 ```
 
 ## Motivation
@@ -131,11 +150,12 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
   - `setup.zsh` — sourced from `~/.zshrc` (interactive); prompt, history, keybindings, and sources the rest.
   - `aliases/` — aliases and directory shortcuts.
   - `etc.zsh` — wires up CLI tools (`zoxide`, `mise`, `fzf`).
-  - `lib/git.zsh` — git helper functions.
-  - `plugins/` — the vendored `git` plugin plus zsh plugin submodules.
-- `packages/mise/.config/mise/config.toml` — global [mise](https://mise.jdx.dev)
-  tool config, symlinked to mise's default `~/.config/mise/config.toml` so the
-  tool baseline is tracked in the repo.
+  - `plugins/git/git.plugin.zsh` — vendored git plugin (the only vendored one;
+    the rest come from the package manager, see [Plugins](#plugins)).
+- `packages/mise/.config/mise/conf.d/10-dotfiles.toml` — global
+  [mise](https://mise.jdx.dev) tool baseline. Lives in `conf.d/` rather than
+  `config.toml` so the work overlay can drop a second file alongside it and mise
+  merges the two, instead of the two packages fighting over one path.
 - `packages/nvim/.config/nvim/` — [LazyVim](https://www.lazyvim.org)-based
   Neovim config, symlinked to `~/.config/nvim`. Brew deps (`neovim`, `luarocks`,
   the nerd font) live in the root `Brewfile`.
@@ -146,27 +166,29 @@ Run `make` (no args) in the repo to see everything:
 
 ```console
 make          # list commands
-make install  # brew deps + symlink + wire up zsh startup files
-make stow     # symlink + wire up zsh startup files (no brew)
-make bench    # benchmark zsh init time, log to bench/results.md
-make profile  # per-component init profile (what's slow)
-make update   # update plugin submodules
+make install       # deps + symlink + wire up zsh startup files
+make install-work  # same, including the work overlay
+make stow          # symlink + wire up zsh startup files (no brew)
+make bench         # benchmark zsh init time, log to bench/results.md
+make profile       # per-component init profile (what's slow)
 ```
 
 ## Plugins
 
-`zsh-autosuggestions` and `zsh-syntax-highlighting` are git submodules under
-`packages/zsh/.config/zsh/plugins/`, conditionally sourced in `setup.zsh`. `install.sh`
-checks them out for you. If you cloned without `--recurse-submodules`:
+`fzf-tab`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` come from the
+system package manager — brew on macOS (they're in the `Brewfile`), apt on
+Linux. All three install to the same shape, which is why `setup.zsh` can source
+them with one small helper that tries each prefix in turn:
 
 ```console
-git submodule update --init --recursive
+$HOMEBREW_PREFIX/share/<name>/<name>.zsh   # brew
+/usr/share/<name>/<name>.zsh               # apt
 ```
 
-To update them to their latest upstream:
+A plugin that isn't installed is silently skipped. Load order matters and is
+fixed in `setup.zsh`: `fzf-tab` after `compinit` (it wraps the completion
+widget), then autosuggestions, then syntax-highlighting last.
 
-```console
-make update
-```
-
-`fzf-tab` is installed via Homebrew (in the `Brewfile`) and sourced from there.
+Update them with `brew upgrade` (or your distro's equivalent) — there are no
+vendored copies or submodules to bump. The one exception is
+`plugins/git/git.plugin.zsh`, a small vendored file tracked directly in the repo.

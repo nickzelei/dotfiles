@@ -2,6 +2,8 @@ brew "fzf"
 brew "fd" # fast find replacement; powers fzf's file/dir walkers
 brew "ripgrep" # fast grep replacement (rg)
 brew "fzf-tab" # replaces zsh tab-completion menu with an fzf picker
+brew "zsh-autosuggestions" # inline suggestions from history
+brew "zsh-syntax-highlighting" # colorizes the command line as you type
 brew "zoxide" # shell ext. to jump to frequently used dirs (modern autojump)
 brew "git"
 brew "mise"
