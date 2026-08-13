@@ -34,7 +34,7 @@ Problems with the status quo:
   stowed, and sourced automatically.
 - Preserve the repo's existing invariants: graceful degradation, no interactive
   prompts in `install.sh`, and no hardcoded package names in any script.
-- Work cleanly with Coder/Ona-style bootstrap (clone repo URL + run install
+- Work cleanly with Coder-style bootstrap (clone repo URL + run install
   script).
 
 ## Non-goals
@@ -160,7 +160,7 @@ The variable must be present at install time:
 - **Laptop:** run `DOTFILES_ENABLE=work make install` (or export it in the
   machine's persistent environment). An optional convenience target
   `make install-work` wraps `DOTFILES_ENABLE=work ./install.sh`.
-- **Coder/Ona:** set `DOTFILES_ENABLE=work` in the workspace environment (e.g.
+- **Coder:** set `DOTFILES_ENABLE=work` in the workspace environment (e.g.
   Terraform `env`), so the standard install run picks it up.
 
 ### 5. `install.sh` changes
@@ -193,11 +193,11 @@ optional packages require stow and are simply not handled there.
 - **Work laptop:** `DOTFILES_ENABLE=work make install`. The work submodule is
   explicitly inited, `packages/work` is stowed to `~/.config/zsh-local`, hooks
   fire.
-- **Coder/Ona work workspace:** point the dotfiles module at this repo URL with
+- **Coder work workspace:** point the dotfiles module at this repo URL with
   `DOTFILES_ENABLE=work` in the workspace env. The module clones the repo and
   runs `install.sh` (auto-detected, or via `post_clone_script`), which inits the
   submodule (workspace git must have access to the private repo) and stows it.
-- **Coder/Ona neutral workspace:** same repo URL, `DOTFILES_ENABLE` unset ->
+- **Coder neutral workspace:** same repo URL, `DOTFILES_ENABLE` unset ->
   behaves like a personal machine.
 
 ### 7. Updating the overlay

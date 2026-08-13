@@ -27,7 +27,7 @@ There is no test suite or linter. The way to verify a change is `make stow` (ide
 
 When adding shell config, put it in the file matching its scope. Lines are appended to the **end** of home files so they run after tool-generated lines (Homebrew, rustup, OrbStack).
 
-**Graceful degradation.** `install.sh` is built to run non-interactively with no TTY (Ona clones the repo and runs it on startup). It never prompts. If `stow` is missing it falls back to `ln -s` for the `zsh` package only (guaranteeing a working shell) and skips the rest with a notice — it deliberately does *not* try to install stow. Preserve this: no interactive prompts, degrade rather than fail.
+**Graceful degradation.** `install.sh` is built to run non-interactively with no TTY (an automated bootstrap like a Coder devbox clones the repo and runs it on startup). It never prompts. If `stow` is missing it falls back to `ln -s` for the `zsh` package only (guaranteeing a working shell) and skips the rest with a notice — it deliberately does *not* try to install stow. Preserve this: no interactive prompts, degrade rather than fail.
 
 **Plugins come from the system package manager.** `fzf-tab`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` are installed by brew (`Brewfile`) or apt, never vendored or submoduled. All three land at `<prefix>/share/<name>/<name>.zsh`, so `setup.zsh` sources them through one `_source_plugin` helper that tries `$HOMEBREW_PREFIX/share` then `/usr/share` and no-ops if neither exists. Load order is load-bearing: `fzf-tab` after compinit, then autosuggestions, then syntax-highlighting last. The only vendored plugin is `plugins/git/git.plugin.zsh`. The `work` overlay is the sole remaining submodule.
 

@@ -5,10 +5,9 @@
 #
 # Two consumers:
 #   - Your laptop: run `./install.sh` (or `make install` to also pull brew deps).
-#   - Ona: clones this repo to ~/dotfiles and runs this script automatically on
-#     environment startup. Ona runs it NON-INTERACTIVELY with no TTY, so this
-#     script never prompts and degrades gracefully when tools are missing.
-#     See https://ona.com/docs/ona/configuration/dotfiles/overview
+#   - Automated bootstrap (e.g. a Coder devbox): clones this repo and runs this
+#     script on workspace startup, NON-INTERACTIVELY with no TTY. So the script
+#     never prompts and degrades gracefully when tools are missing.
 #
 # Every directory under packages/ is a stow package whose contents mirror $HOME
 # (e.g. packages/zsh/.config/zsh -> ~/.config/zsh). Adding a tool is just
@@ -68,7 +67,7 @@ if command -v stow >/dev/null 2>&1; then
   # --ignore the marker so `packages/<opt>/.optional` is never linked into $HOME.
   stow --restow --ignore='\.optional' --dir="$PKG_DIR" --target="$HOME" "${names[@]}"
 else
-  # No stow (e.g. a minimal Ona image). We deliberately DON'T try to install it
+  # No stow (e.g. a minimal container image). We deliberately DON'T try to install it
   # — that's the fragile, cross-distro part. Instead guarantee the one thing
   # that must always work: a usable shell. Link the zsh package directly and
   # skip the rest with a notice.
