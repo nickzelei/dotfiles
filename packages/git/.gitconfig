@@ -1,8 +1,12 @@
 [user]
 	name = Nick Z
 	email = 2420177+nickzelei@users.noreply.github.com
-	signingkey = ~/.ssh/id_ed25519.pub
 
+# No signingkey here: it is the one genuinely machine-shaped setting, and naming a
+# path this file cannot guarantee breaks every commit rather than degrading. A Coder
+# workspace has no ~/.ssh/id_ed25519 and supplies its own key in /etc/gitconfig, so
+# leaving this unset lets each machine's system config answer it. Set it in
+# config.local below on machines that have their own.
 [gpg]
 	format = ssh
 
