@@ -26,6 +26,11 @@ alias kctx='kubectx'
 
 alias brewup='brew update && brew upgrade && brew autoremove && brew cleanup'
 
+# claude
+alias clauded="claude --dangerously-skip-permissions"
+# a Coder workspace is disposable, so skipping permissions there is the default
+[[ "${CODER:-}" == "true" ]] && alias claude="claude --allow-dangerously-skip-permissions"
+
 docker_rmi() {
     docker rmi -f $(docker images -aq)
 }
