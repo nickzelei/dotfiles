@@ -16,7 +16,6 @@ export PATH="$PATH:$HOME/go/bin"
 export PATH="$HOME/.local/bin:$PATH"
 
 # AWS
-export AWS_DEFAULT_REGION=us-west-2
 export AWS_PAGER=""
 
 export LESS="-R" # adding -X will prevent the pager from clearing
