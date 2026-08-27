@@ -1,4 +1,5 @@
 [tools]
 go = "latest"
 herdr = "latest"
+node = "lts"
 uv = "latest"
