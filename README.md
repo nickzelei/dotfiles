@@ -16,13 +16,19 @@ make install   # deps + symlink + wire up zsh startup files
 ```
 
 `make install` runs `brew bundle` (skipped with a notice if brew isn't
-installed, e.g. on Linux) then `./install.sh`. If you just want the symlinks
-without touching brew, run `./install.sh` (or `make stow`) directly.
+installed, e.g. on Linux) then `./install.sh`, which symlinks the config and
+runs `mise install`. If you just want the symlinks without touching brew, run
+`./install.sh` (or `make stow`) directly.
+
+Most of the CLI toolchain comes from [mise](https://mise.jdx.dev), not brew, so
+on Linux `./install.sh` alone is the whole install as long as `mise`, `git`,
+`stow` and `zsh` are already there. The Brewfile only covers what mise can't:
+`git`, `stow`, `mise` itself, `luarocks`, the three zsh plugins, and the casks.
 
 Then open a new shell (or `exec zsh`).
 
 Everything in `setup.zsh` is guarded by `command -v` / `[[ -f ]]`, so a machine
-missing some of the Brewfile tools still gets a working shell — it just loses
+missing some of these tools still gets a working shell — it just loses
 that tool's integration. Install what your platform has and move on.
 
 ### How the linking works
@@ -159,7 +165,8 @@ simple, fast, and easy to move between machines.
 Repo root holds tooling that is *not* symlinked into `$HOME`:
 
 - `install.sh` — symlinks packages into `$HOME` and wires zsh's startup files (idempotent).
-- `Brewfile` — brew deps (`fzf`, `fd`, `ripgrep`, `stow`, `zoxide`, `mise`, …).
+- `Brewfile` — the few deps mise can't provide: `git`, `stow`, `mise`,
+  `luarocks`, the zsh plugins, and the macOS casks. Everything else is a mise tool.
 - `Makefile` — maintenance commands; run `make` to list them.
 - `bench/` — init benchmark script and its results log.
 
@@ -170,16 +177,20 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
   - `profile.zsh` — sourced from `~/.zprofile` (login shells); `$PATH` ordered after Homebrew.
   - `setup.zsh` — sourced from `~/.zshrc` (interactive); prompt, history, keybindings, and sources the rest.
   - `aliases/` — aliases and directory shortcuts.
-  - `etc.zsh` — wires up CLI tools (`zoxide`, `mise`, `fzf`).
+  - `etc.zsh` — wires up CLI tools (`mise` first, then `zoxide`, `fzf`).
   - `plugins/git/git.plugin.zsh` — vendored git plugin (the only vendored one;
     the rest come from the package manager, see [Plugins](#plugins)).
 - `packages/mise/.config/mise/conf.d/10-dotfiles.toml` — global
-  [mise](https://mise.jdx.dev) tool baseline. Lives in `conf.d/` rather than
-  `config.toml` so the work overlay can drop a second file alongside it and mise
-  merges the two, instead of the two packages fighting over one path.
+  [mise](https://mise.jdx.dev) tool baseline: language runtimes *and* the CLI
+  toolchain (`fzf`, `fd`, `ripgrep`, `bat`, `zoxide`, `gh`, `lazygit`,
+  `hyperfine`, `neovim`). Keeping them here rather than in the `Brewfile` is what
+  makes them available on the Linux boxes. Update with `mise upgrade`. Lives in
+  `conf.d/` rather than `config.toml` so the work overlay can drop a second file
+  alongside it and mise merges the two, instead of the two packages fighting over
+  one path.
 - `packages/nvim/.config/nvim/` — [LazyVim](https://www.lazyvim.org)-based
-  Neovim config, symlinked to `~/.config/nvim`. Brew deps (`neovim`, `luarocks`,
-  the nerd font) live in the root `Brewfile`.
+  Neovim config, symlinked to `~/.config/nvim`. `neovim` itself is a mise tool;
+  `luarocks` and the nerd font are still brew deps.
 
 ## Commands
 
@@ -210,6 +221,7 @@ A plugin that isn't installed is silently skipped. Load order matters and is
 fixed in `setup.zsh`: `fzf-tab` after `compinit` (it wraps the completion
 widget), then autosuggestions, then syntax-highlighting last.
 
-Update them with `brew upgrade` (or your distro's equivalent) — there are no
-vendored copies or submodules to bump. The one exception is
+Update these three with `brew upgrade` (or your distro's equivalent) — there are
+no vendored copies or submodules to bump. Everything else updates via
+`mise upgrade`. The one exception is
 `plugins/git/git.plugin.zsh`, a small vendored file tracked directly in the repo.

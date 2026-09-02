@@ -1,11 +1,14 @@
 
+# mise first: most of the CLI toolchain below (zoxide, fzf, fd, bat) is a mise
+# tool now, and activating puts the real install dirs on PATH so the `command -v`
+# probes and init evals don't each re-exec mise through a shim.
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
 # zoxide (smarter cd)
 if command -v zoxide >/dev/null 2>&1; then
     eval "$(zoxide init zsh)"
-fi
-
-if command -v mise >/dev/null 2>&1; then
-  eval "$(mise activate zsh)"
 fi
 
 # fzf (fuzzy finder) — rebinds Ctrl-R history search, Ctrl-T file paste, Alt-C cd

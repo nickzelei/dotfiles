@@ -12,6 +12,17 @@ typeset -U path PATH
 # Go — appended, no ordering concerns.
 export PATH="$PATH:$HOME/go/bin"
 
+# mise-managed tools for NON-interactive shells (`ssh host cmd`, cron, scripts);
+# interactive shells get the real bin dirs from `mise activate` in etc.zsh.
+# APPENDED, not prepended, and that ordering is load-bearing: a shim is a mise
+# re-exec (~20ms) rather than the binary, and zsh SCRIPTS source ~/.zshenv too —
+# so a front-of-PATH shims dir gets inherited by any shell they spawn, where it
+# wins over mise's own bin dirs and taxes every tool call during init. At the
+# back it's a pure fallback, only reached when nothing else provides the tool.
+_mise_shims="${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims"
+[[ -d "$_mise_shims" ]] && export PATH="$PATH:$_mise_shims"
+unset _mise_shims
+
 # local bin (e.g. claude installs here).
 export PATH="$HOME/.local/bin:$PATH"
 

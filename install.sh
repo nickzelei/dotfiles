@@ -146,6 +146,16 @@ else
   done
 fi
 
+# Install the mise tool baseline (conf.d/10-dotfiles.toml, linked above). Most of
+# the CLI toolchain lives there rather than the Brewfile, so this is what gets
+# fzf/rg/fd/nvim onto a box with no brew. Non-fatal: a failed download must not
+# take the shell setup down with it, and `mise install` never prompts.
+if command -v mise >/dev/null 2>&1; then
+  mise install || echo "warning: 'mise install' failed; some tools will be missing." >&2
+else
+  echo "mise not found — skipping tool install (see https://mise.jdx.dev)." >&2
+fi
+
 # Wire a tracked config file into a home startup file with a guarded source line
 # (so the shell still starts if the repo is moved/removed). Idempotent: only
 # appends if absent. Appends to the END so it runs after any tool-generated lines

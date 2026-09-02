@@ -15,9 +15,9 @@ bench: ## Benchmark zsh init time (appends a row to bench/results.md)
 profile: ## Show a per-component init profile (what's slow)
 	@ZSH_PROFILE=1 zsh -i -c exit
 
-install: ## Install brew deps (if brew is present), then symlink and wire up zsh startup files
+install: ## Install brew deps (if brew is present), symlink and wire zsh, then install mise tools
 	@if command -v brew >/dev/null 2>&1; then brew bundle; \
-	else echo "brew not found — skipping deps; install the Brewfile tools with your package manager"; fi
+	else echo "brew not found — get git, stow and the zsh plugins from your distro's package manager"; fi
 	./install.sh
 
 stow: ## Symlink the config into $HOME and wire zsh startup files (no brew deps)
