@@ -2,3 +2,15 @@
 	path = packages/work/.config/zsh-local
 	url = git@github.com:nickzelei/zsh-work-config.git
 	update = none
+[submodule "packages/zsh/.config/zsh/plugins/fzf-tab"]
+	path = packages/zsh/.config/zsh/plugins/fzf-tab
+	url = https://github.com/Aloxaf/fzf-tab.git
+	shallow = true
+[submodule "packages/zsh/.config/zsh/plugins/zsh-autosuggestions"]
+	path = packages/zsh/.config/zsh/plugins/zsh-autosuggestions
+	url = https://github.com/zsh-users/zsh-autosuggestions.git
+	shallow = true
+[submodule "packages/zsh/.config/zsh/plugins/zsh-syntax-highlighting"]
+	path = packages/zsh/.config/zsh/plugins/zsh-syntax-highlighting
+	url = https://github.com/zsh-users/zsh-syntax-highlighting.git
+	shallow = true

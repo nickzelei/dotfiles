@@ -23,7 +23,8 @@ runs `mise install`. If you just want the symlinks without touching brew, run
 Most of the CLI toolchain comes from [mise](https://mise.jdx.dev), not brew, so
 on Linux `./install.sh` alone is the whole install as long as `mise`, `git`,
 `stow` and `zsh` are already there. The Brewfile only covers what mise can't:
-`git`, `stow`, `mise` itself, `luarocks`, the three zsh plugins, and the casks.
+`git`, `stow`, `mise` itself, `luarocks`, and the macOS casks. The zsh plugins are git
+submodules, so they come with the repo (see [Plugins](#plugins)).
 
 Then open a new shell (or `exec zsh`).
 
@@ -166,7 +167,7 @@ Repo root holds tooling that is *not* symlinked into `$HOME`:
 
 - `install.sh` — symlinks packages into `$HOME` and wires zsh's startup files (idempotent).
 - `Brewfile` — the few deps mise can't provide: `git`, `stow`, `mise`,
-  `luarocks`, the zsh plugins, and the macOS casks. Everything else is a mise tool.
+  `luarocks`, and the macOS casks. Everything else is a mise tool or a submodule.
 - `Makefile` — maintenance commands; run `make` to list them.
 - `bench/` — init benchmark script and its results log.
 
@@ -178,8 +179,8 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
   - `setup.zsh` — sourced from `~/.zshrc` (interactive); prompt, history, keybindings, and sources the rest.
   - `aliases/` — aliases and directory shortcuts.
   - `etc.zsh` — wires up CLI tools (`mise` first, then `zoxide`, `fzf`).
-  - `plugins/git/git.plugin.zsh` — vendored git plugin (the only vendored one;
-    the rest come from the package manager, see [Plugins](#plugins)).
+  - `plugins/` — `git.plugin.zsh` is vendored outright; the other three are git
+    submodules, see [Plugins](#plugins).
 - `packages/mise/.config/mise/conf.d/10-dotfiles.toml` — global
   [mise](https://mise.jdx.dev) tool baseline: language runtimes *and* the CLI
   toolchain (`fzf`, `fd`, `ripgrep`, `bat`, `zoxide`, `gh`, `lazygit`,
@@ -207,21 +208,26 @@ make profile       # per-component init profile (what's slow)
 
 ## Plugins
 
-`fzf-tab`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` come from the
-system package manager — brew on macOS (they're in the `Brewfile`), apt on
-Linux. All three install to the same shape, which is why `setup.zsh` can source
-them with one small helper that tries each prefix in turn:
+`fzf-tab`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` are git
+submodules under `packages/zsh/.config/zsh/plugins/`, each pinned to a commit and
+cloned shallow. `install.sh` runs `git submodule update --init` (no `--checkout`,
+so the `update = none` work overlay is left alone), and `setup.zsh` sources them
+straight off that path:
 
 ```console
-$HOMEBREW_PREFIX/share/<name>/<name>.zsh   # brew
-/usr/share/<name>/<name>.zsh               # apt
+~/.config/zsh/plugins/<name>/<name>.zsh
 ```
 
-A plugin that isn't installed is silently skipped. Load order matters and is
-fixed in `setup.zsh`: `fzf-tab` after `compinit` (it wraps the completion
-widget), then autosuggestions, then syntax-highlighting last.
+They were brew/apt packages before. Submodules are the better fit for three
+reasons: apt doesn't package `fzf-tab` at all, so Linux silently lost it; the
+gitlink pins a version, which a `brew upgrade` does not; and it costs nothing at
+startup, unlike a plugin manager (`sheldon source` measured ~9.5ms per shell to
+emit three `source` lines).
 
-Update these three with `brew upgrade` (or your distro's equivalent) — there are
-no vendored copies or submodules to bump. Everything else updates via
-`mise upgrade`. The one exception is
-`plugins/git/git.plugin.zsh`, a small vendored file tracked directly in the repo.
+A submodule that was never checked out is silently skipped, so a `git clone`
+without `--recursive` still gives you a working shell. Load order is fixed in
+`setup.zsh` and the reasoning is commented there — `fzf-tab` before
+`zsh-autosuggestions` is the constraint that actually bites.
+
+Bump them with `make update-plugins` (`git submodule update --remote`), then
+commit the moved gitlinks. Everything else updates via `mise upgrade`.

@@ -29,7 +29,9 @@ When adding shell config, put it in the file matching its scope. Lines are appen
 
 **Graceful degradation.** `install.sh` is built to run non-interactively with no TTY (an automated bootstrap like a Coder devbox clones the repo and runs it on startup). It never prompts. If `stow` is missing it falls back to `ln -s` for the `zsh` package only (guaranteeing a working shell) and skips the rest with a notice — it deliberately does *not* try to install stow. Preserve this: no interactive prompts, degrade rather than fail.
 
-**Plugins come from the system package manager.** `fzf-tab`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` are installed by brew (`Brewfile`) or apt, never vendored or submoduled. All three land at `<prefix>/share/<name>/<name>.zsh`, so `setup.zsh` sources them through one `_source_plugin` helper that tries `$HOMEBREW_PREFIX/share` then `/usr/share` and no-ops if neither exists. Load order is load-bearing: `fzf-tab` after compinit, then autosuggestions, then syntax-highlighting last. The only vendored plugin is `plugins/git/git.plugin.zsh`. The `work` overlay is the sole remaining submodule.
+**Plugins are git submodules.** `fzf-tab`, `zsh-autosuggestions`, and `zsh-syntax-highlighting` live under `packages/zsh/.config/zsh/plugins/` as shallow submodules pinned to a commit, and `setup.zsh` sources `plugins/<name>/<name>.zsh` off the stowed path through the `_source_plugin` helper (guarded, so an un-checked-out submodule is skipped rather than fatal). They used to be brew/apt packages; that was reverted because apt has no `fzf-tab` package, so Linux silently lost it. Do not reintroduce a package-manager probe, and do not add a plugin manager — `sheldon` was measured at ~9.5ms per shell to emit three `source` lines that are free to hardcode. `install.sh` populates them with a plain `git submodule update --init`: **no `--checkout`**, which is what keeps the `update = none` work overlay from being dragged in. `plugins/git/git.plugin.zsh` is vendored outright.
+
+**Plugin load order.** `fzf-tab` must precede `zsh-autosuggestions` — it copies the completion widget on load and must see the unwrapped one (`fzf-tab.zsh:382`). `zsh-syntax-highlighting` last is precautionary only: on zsh >= 5.9 it hooks `zle-line-pre-redraw` and stubs out `_zsh_highlight_bind_widgets` entirely, so it no longer rebinds widgets. Keep the order anyway for older zsh.
 
 **Two override layers.** Each of the three zsh base files ends with two guarded sources, in order: the **overlay** (`~/.config/zsh-local/<scope>.zsh`, a shared layer for a class of machines, delivered by a stow package) then the **local hatch** (`~/.zshenv.local` / `~/.zprofile.local` / `~/.zshrc.local`, untracked, one machine). Both no-op when absent. Keep them distinct — the overlay is committed somewhere, the hatch never is. `.gitconfig`'s `~/.config/git/config.local` include is the same idea.
 
@@ -40,6 +42,6 @@ When adding shell config, put it in the file matching its scope. Lines are appen
 ## Conventions
 
 - `install.sh` must stay idempotent — `wire()` greps before appending; stow uses `--restow`.
-- Brew dependencies belong in `Brewfile`, not in any script.
+- Brew dependencies belong in `Brewfile`, not in any script. It is down to `git`, `stow`, `mise`, `luarocks` and the casks — reach for a mise tool or a submodule before adding to it.
 - When tracking a new config, **move** (not copy) the original out of `$HOME` — stow refuses to clobber a real file in place.
 - Optional packages carry a `.optional` marker and a submodule with `update = none`; never stow or clone them unless `DOTFILES_ENABLE` names them. Keep the no-hardcoded-list rule: discover by glob + marker, not by name in the script.

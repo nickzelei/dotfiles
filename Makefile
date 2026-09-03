@@ -2,12 +2,12 @@
 # them. Targets are self-documenting via the `## ` comments below.
 
 .DEFAULT_GOAL := help
-.PHONY: help bench profile install install-work stow
+.PHONY: help bench profile install install-work stow update-plugins
 
 help: ## List available commands
 	@echo "Usage: make <target>\n"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 bench: ## Benchmark zsh init time (appends a row to bench/results.md)
 	@./bench/bench.zsh
@@ -17,7 +17,7 @@ profile: ## Show a per-component init profile (what's slow)
 
 install: ## Install brew deps (if brew is present), symlink and wire zsh, then install mise tools
 	@if command -v brew >/dev/null 2>&1; then brew bundle; \
-	else echo "brew not found — get git, stow and the zsh plugins from your distro's package manager"; fi
+	else echo "brew not found — get git, stow and mise from your distro's package manager"; fi
 	./install.sh
 
 stow: ## Symlink the config into $HOME and wire zsh startup files (no brew deps)
@@ -25,3 +25,9 @@ stow: ## Symlink the config into $HOME and wire zsh startup files (no brew deps)
 
 install-work: ## Symlink config incl. the work overlay (DOTFILES_ENABLE=work)
 	DOTFILES_ENABLE=work ./install.sh
+
+update-plugins: ## Bump the zsh plugin submodules to their upstream tips
+	git submodule update --remote --merge -- packages/zsh/.config/zsh/plugins
+	@git diff --quiet -- packages/zsh/.config/zsh/plugins \
+		&& echo "plugins already up to date" \
+		|| git status --short -- packages/zsh/.config/zsh/plugins

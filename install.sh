@@ -93,6 +93,17 @@ init_submodule() {
   return 1
 }
 
+# Populate the non-optional submodules (the zsh plugins under
+# packages/zsh/.config/zsh/plugins/). No `--checkout` here, deliberately: a plain
+# `--init` honours the `update = none` on the work overlay, so this fills in the
+# plugins without dragging in a private repo this machine may not be able to
+# reach. GIT_TERMINAL_PROMPT=0 keeps a stray credential helper from blocking.
+# Non-fatal — a shell missing a plugin is fine, a bootstrap that dies is not.
+if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
+  GIT_TERMINAL_PROMPT=0 git submodule update --init --recursive \
+    || echo "warning: could not init submodules; some zsh plugins will be missing." >&2
+fi
+
 if command -v stow >/dev/null 2>&1; then
   # Which optional packages to enable on this machine. DOTFILES_ENABLE is a
   # space- or comma-separated list of package names; empty/unset enables none.

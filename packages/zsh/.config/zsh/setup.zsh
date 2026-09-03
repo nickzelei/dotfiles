@@ -79,25 +79,26 @@ source "$ZSHRC_CONFIG_DIR/etc.zsh"
 
 source "$ZSHRC_CONFIG_DIR/plugins/git/git.plugin.zsh"
 
-# Plugins come from the system package manager, which installs them all to
-# <prefix>/share/<name>/<name>.zsh — brew on macOS, apt on Linux. Sources the
-# first path that exists and silently no-ops if the plugin isn't installed, so a
-# box without it still gets a working shell.
+# Plugins are git submodules under plugins/, so every platform loads the same
+# bytes from the same path — no brew/apt divergence (apt doesn't package fzf-tab
+# at all). Guarded so a checkout whose submodules were never init'd still gets a
+# working shell, just without that plugin.
 _source_plugin() {
-  local p
-  for p in "$HOMEBREW_PREFIX/share/$1/$1.zsh" "/usr/share/$1/$1.zsh"; do
-    [[ -f "$p" ]] && { source "$p"; return }
-  done
+  [[ -f "$ZSHRC_CONFIG_DIR/plugins/$1/$1.zsh" ]] && source "$ZSHRC_CONFIG_DIR/plugins/$1/$1.zsh"
 }
 
-# fzf-tab replaces the completion menu with an fzf picker. Must load after
-# compinit but BEFORE autosuggestions/syntax-highlighting, since it wraps the
-# completion widget.
+# Load order. fzf-tab BEFORE zsh-autosuggestions is the real constraint: fzf-tab
+# copies the completion widget on load, and its own source says to do so "before
+# it's wrapped by zsh-autosuggestions" (fzf-tab.zsh:382). Get it backwards and it
+# saves the already-wrapped widget.
+#
+# syntax-highlighting last is belt-and-braces: on zsh >= 5.9 it hooks
+# zle-line-pre-redraw and stubs out its widget-rebinding path entirely, so it no
+# longer cares. Older zsh does still rebind, so keep it here for those boxes.
 _source_plugin fzf-tab
 # Preview directory contents when completing `cd`.
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls -la $realpath'
 
-# These two must load last, in this order.
 _source_plugin zsh-autosuggestions
 _source_plugin zsh-syntax-highlighting
 unset -f _source_plugin
