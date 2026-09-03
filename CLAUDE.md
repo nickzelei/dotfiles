@@ -42,6 +42,7 @@ When adding shell config, put it in the file matching its scope. Lines are appen
 ## Conventions
 
 - `install.sh` must stay idempotent — `wire()` greps before appending; stow uses `--restow`.
-- Brew dependencies belong in `Brewfile`, not in any script. It is down to `git`, `stow`, `mise`, `luarocks` and the casks — reach for a mise tool or a submodule before adding to it.
+- Brew dependencies belong in `Brewfile`, not in any script. It is down to `git`, `stow`, `mise` and the casks — reach for a mise tool or a submodule before adding to it.
+- No `luarocks`. `:checkhealth lazy` reports no plugin requires it, and lazy.nvim's `hererocks = nil` default bootstraps its own if one ever does.
 - When tracking a new config, **move** (not copy) the original out of `$HOME` — stow refuses to clobber a real file in place.
 - Optional packages carry a `.optional` marker and a submodule with `update = none`; never stow or clone them unless `DOTFILES_ENABLE` names them. Keep the no-hardcoded-list rule: discover by glob + marker, not by name in the script.

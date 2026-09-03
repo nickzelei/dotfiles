@@ -23,7 +23,7 @@ runs `mise install`. If you just want the symlinks without touching brew, run
 Most of the CLI toolchain comes from [mise](https://mise.jdx.dev), not brew, so
 on Linux `./install.sh` alone is the whole install as long as `mise`, `git`,
 `stow` and `zsh` are already there. The Brewfile only covers what mise can't:
-`git`, `stow`, `mise` itself, `luarocks`, and the macOS casks. The zsh plugins are git
+`git`, `stow`, `mise` itself, and the macOS casks. The zsh plugins are git
 submodules, so they come with the repo (see [Plugins](#plugins)).
 
 Then open a new shell (or `exec zsh`).
@@ -166,8 +166,8 @@ simple, fast, and easy to move between machines.
 Repo root holds tooling that is *not* symlinked into `$HOME`:
 
 - `install.sh` — symlinks packages into `$HOME` and wires zsh's startup files (idempotent).
-- `Brewfile` — the few deps mise can't provide: `git`, `stow`, `mise`,
-  `luarocks`, and the macOS casks. Everything else is a mise tool or a submodule.
+- `Brewfile` — the few deps mise can't provide: `git`, `stow`, `mise`, and the
+  macOS casks. Everything else is a mise tool or a submodule.
 - `Makefile` — maintenance commands; run `make` to list them.
 - `bench/` — init benchmark script and its results log.
 
@@ -190,8 +190,10 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
   alongside it and mise merges the two, instead of the two packages fighting over
   one path.
 - `packages/nvim/.config/nvim/` — [LazyVim](https://www.lazyvim.org)-based
-  Neovim config, symlinked to `~/.config/nvim`. `neovim` itself is a mise tool;
-  `luarocks` and the nerd font are still brew deps.
+  Neovim config, symlinked to `~/.config/nvim`. `neovim` itself is a mise tool
+  and the nerd font is a cask. There's deliberately no `luarocks`: no plugin here
+  needs it (`:checkhealth lazy` confirms), and if one ever does, lazy.nvim's
+  default `hererocks = nil` bootstraps its own copy.
 
 ## Commands
 

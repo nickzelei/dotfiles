@@ -8,8 +8,6 @@ brew "git"
 brew "stow" # symlink farm manager; install.sh uses it to link configs into $HOME
 brew "mise" # bootstraps itself; installs the rest of the toolchain
 
-brew "luarocks" # not in the mise registry; some nvim plugins need it
-
 cask "ghostty"
 cask "music-decoy" # https://lowtechguys.com/musicdecoy/
 cask "font-jetbrains-mono-nerd-font" # nerd font for nvim/terminal glyphs
