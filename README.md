@@ -169,7 +169,13 @@ Repo root holds tooling that is *not* symlinked into `$HOME`:
 - `Brewfile` — the few deps mise can't provide: `git`, `stow`, `mise`, and the
   macOS casks. Everything else is a mise tool or a submodule.
 - `Makefile` — maintenance commands; run `make` to list them.
-- `bench/` — init benchmark script and its results log.
+- `mise.lock` — pinned tool versions, download URLs and checksums for every
+  platform. `install.sh` **copies** it to `~/.config/mise/mise.lock` rather than
+  stowing it: mise rewrites the lockfile whenever it installs a tool that isn't
+  in it (the work overlay's), and through a symlink those edits would land on
+  tracked content and break the next bootstrap's `git pull`. Refresh with
+  `make update-tools`.
+- `bench/` — the init benchmark and the cold-install benchmark, plus a results log.
 
 Stow packages live under `packages/` (their contents get symlinked into `$HOME`):
 
@@ -185,7 +191,8 @@ Stow packages live under `packages/` (their contents get symlinked into `$HOME`)
   [mise](https://mise.jdx.dev) tool baseline: language runtimes *and* the CLI
   toolchain (`fzf`, `fd`, `ripgrep`, `bat`, `zoxide`, `gh`, `lazygit`,
   `hyperfine`, `neovim`). Keeping them here rather than in the `Brewfile` is what
-  makes them available on the Linux boxes. Update with `mise upgrade`. Lives in
+  makes them available on the Linux boxes. Versions come from `mise.lock`; bump
+  them with `make update-tools`. Lives in
   `conf.d/` rather than `config.toml` so the work overlay can drop a second file
   alongside it and mise merges the two, instead of the two packages fighting over
   one path.
@@ -205,8 +212,34 @@ make install       # deps + symlink + wire up zsh startup files
 make install-work  # same, including the work overlay
 make stow          # symlink + wire up zsh startup files (no brew)
 make bench         # benchmark zsh init time, log to bench/results.md
+make bench-install # benchmark a COLD install.sh (the devbox bootstrap path)
 make profile       # per-component init profile (what's slow)
+make update-tools  # refresh mise.lock to the latest tool versions
 ```
+
+### Timing a slow install
+
+`make bench-install` runs the installer against a throwaway `$HOME` so every
+submodule clone and tool download happens for real. To time the machine that is
+actually slow, instrument the real run instead:
+
+```console
+DOTFILES_TIMING=1 ./install.sh
+```
+
+Both print a per-phase breakdown. Two knobs worth knowing:
+
+- `DOTFILES_ASYNC_TOOLS=1` detaches `mise install` so the shell is usable
+  immediately and tools land in the background. Defaults on when `CODER=true`,
+  off elsewhere so `make install` still means "tools are ready".
+- Tool resolution hits the GitHub API, and **anonymously that is 60 requests per
+  hour shared across an egress IP** — a devbox fleet behind one NAT drains it and
+  installs start 403ing. `install.sh` looks for a token in order:
+  `$GITHUB_TOKEN`/`$GH_TOKEN`, then **`$DEVCONTAINER_GITHUB_TOKEN`** (which
+  grow-workspace's `coder_agent` already exports from its GitHub external auth),
+  then `coder external-auth access-token github`, then `gh auth token`. It logs
+  whether it found one. `mise.lock` is the belt-and-braces fix: pinned tools need
+  no resolution at all.
 
 ## Plugins
 

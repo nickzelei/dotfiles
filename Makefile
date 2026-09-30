@@ -2,7 +2,7 @@
 # them. Targets are self-documenting via the `## ` comments below.
 
 .DEFAULT_GOAL := help
-.PHONY: help bench profile install install-work stow update-plugins
+.PHONY: help bench bench-install profile install install-work stow update-plugins update-tools
 
 help: ## List available commands
 	@echo "Usage: make <target>\n"
@@ -11,6 +11,9 @@ help: ## List available commands
 
 bench: ## Benchmark zsh init time (appends a row to bench/results.md)
 	@./bench/bench.zsh
+
+bench-install: ## Benchmark a COLD install.sh in a sandbox (the devbox bootstrap path)
+	@./bench/install-bench.sh
 
 profile: ## Show a per-component init profile (what's slow)
 	@ZSH_PROFILE=1 zsh -i -c exit
@@ -25,6 +28,16 @@ stow: ## Symlink the config into $HOME and wire zsh startup files (no brew deps)
 
 install-work: ## Symlink config incl. the work overlay (DOTFILES_ENABLE=work)
 	DOTFILES_ENABLE=work ./install.sh
+
+update-tools: ## Refresh mise.lock (pinned tool versions, URLs and checksums)
+	@tmp="$$(mktemp -d)"; mkdir -p "$$tmp/conf.d"; \
+	cp packages/mise/.config/mise/conf.d/10-dotfiles.toml "$$tmp/conf.d/"; \
+	GITHUB_TOKEN="$${GITHUB_TOKEN:-$$(gh auth token 2>/dev/null)}" \
+	  MISE_CONFIG_DIR="$$tmp" MISE_CACHE_DIR="$$tmp/cache" \
+	  MISE_DATA_DIR="$$tmp/data" MISE_STATE_DIR="$$tmp/state" \
+	  mise lock --global || exit 1; \
+	cp "$$tmp/mise.lock" mise.lock; chmod 644 mise.lock; rm -rf "$$tmp"
+	@git diff --stat -- mise.lock || true
 
 update-plugins: ## Bump the zsh plugin submodules to their upstream tips
 	git submodule update --remote --merge -- packages/zsh/.config/zsh/plugins

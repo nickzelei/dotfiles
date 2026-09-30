@@ -11,6 +11,10 @@ fzf = "latest"
 gh = "latest"
 hyperfine = "latest"
 lazygit = "latest"
-neovim = "latest"
 ripgrep = "latest"
 zoxide = "latest"
+
+# Spelled with the backend because plain `neovim` resolves to a vfox Lua plugin
+# that calls the GitHub API itself — it ignores mise's token and records no URL in
+# mise.lock, so a fresh box resolves it live and 403s on the anonymous 60/hr limit.
+"aqua:neovim/neovim" = "latest"

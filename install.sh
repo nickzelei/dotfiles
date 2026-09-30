@@ -19,6 +19,38 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_DIR="$REPO_DIR/packages"
 cd "$REPO_DIR"
 
+# Opt-in phase timing: DOTFILES_TIMING=1 prints a per-phase breakdown at the end.
+# The cost this measures is network latency on the bootstrapping box, which does
+# not reproduce on a laptop, so the timer has to ship with the script.
+_probe="$(date +%s%3N 2>/dev/null || true)"
+if [ -n "${EPOCHREALTIME:-}" ]; then
+  _now_ms() { local t="${EPOCHREALTIME/,/.}" f; f="${t#*.}000"; echo $(( ${t%.*} * 1000 + 10#${f:0:3} )); }
+elif [ -n "$_probe" ] && [ -z "${_probe//[0-9]/}" ]; then
+  _now_ms() { date +%s%3N; }
+else
+  _now_ms() { echo $(( $(date +%s) * 1000 )); }
+fi
+
+_phase_name=""; _phase_start=0; _phase_log=""; _run_start="$(_now_ms)"
+
+# Close the running phase (if any) and start one named "$1". `phase` with no
+# argument just closes the last one.
+phase() {
+  [ -n "${DOTFILES_TIMING:-}" ] || return 0
+  local n; n="$(_now_ms)"
+  if [ -n "$_phase_name" ]; then
+    _phase_log+="$(printf '  %-24s %6d ms' "$_phase_name" "$(( n - _phase_start ))")"$'\n'
+  fi
+  _phase_name="${1:-}"; _phase_start="$n"
+}
+
+phase_report() {
+  [ -n "${DOTFILES_TIMING:-}" ] || return 0
+  phase
+  printf '\ntiming (DOTFILES_TIMING=1)\n%s  %-24s %6d ms\n' \
+    "$_phase_log" TOTAL "$(( $(_now_ms) - _run_start ))"
+}
+
 mkdir -p "$HOME/.config"
 
 # Keep ~/.config occupied by something stow doesn't own. Stow's unstow pass (which
@@ -99,11 +131,14 @@ init_submodule() {
 # plugins without dragging in a private repo this machine may not be able to
 # reach. GIT_TERMINAL_PROMPT=0 keeps a stray credential helper from blocking.
 # Non-fatal — a shell missing a plugin is fine, a bootstrap that dies is not.
+phase submodules
 if [ -f .gitmodules ] && command -v git >/dev/null 2>&1; then
-  GIT_TERMINAL_PROMPT=0 git submodule update --init --recursive \
+  # --jobs: three independent clones, so this is latency-bound, not bandwidth-bound.
+  GIT_TERMINAL_PROMPT=0 git submodule update --init --recursive --jobs 4 \
     || echo "warning: could not init submodules; some zsh plugins will be missing." >&2
 fi
 
+phase stow
 if command -v stow >/dev/null 2>&1; then
   # Which optional packages to enable on this machine. DOTFILES_ENABLE is a
   # space- or comma-separated list of package names; empty/unset enables none.
@@ -143,7 +178,8 @@ if command -v stow >/dev/null 2>&1; then
   done
 
   # --ignore the marker so `packages/<opt>/.optional` is never linked into $HOME.
-  stow --restow --ignore='\.optional' --dir="$PKG_DIR" --target="$HOME" "${names[@]}"
+  stow --restow --ignore='\.optional' --ignore='^mise\.lock$' \
+    --dir="$PKG_DIR" --target="$HOME" "${names[@]}"
 else
   # No stow (e.g. a minimal container image). We deliberately DON'T try to install it
   # — that's the fragile, cross-distro part. Instead guarantee the one thing
@@ -161,8 +197,82 @@ fi
 # the CLI toolchain lives there rather than the Brewfile, so this is what gets
 # fzf/rg/fd/nvim onto a box with no brew. Non-fatal: a failed download must not
 # take the shell setup down with it, and `mise install` never prompts.
+phase github-token
+# Give mise a GitHub token if we can find one. Without it every "latest" resolves
+# against the anonymous API — 60 requests/hour shared by egress IP, which a whole
+# devbox fleet behind one NAT exhausts easily; the symptom is a slow install that
+# degrades into 403s. The lockfile below removes most of these calls, but the work
+# overlay's tools aren't in it, so a token still helps.
+#
+# DEVCONTAINER_GITHUB_TOKEN is the Coder devbox source: grow-workspace's
+# coder_agent sets it from data.coder_external_auth.github for devcontainer
+# builds, which puts a per-user token in this script's environment for free. It is
+# preferred over asking the coder CLI (a round trip) and over `gh auth token`,
+# which is useless here twice over: gh is itself a mise tool that this run is about
+# to install, and the template's gh-auth.sh races us anyway (coder_script has no
+# ordering — every run_on_start script shares one errgroup).
+#
+# Every probe is best-effort and must not block. `coder` prints a login URL rather
+# than a token when the provider isn't linked, so validate the shape before use.
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ]; then
+  tok="${DEVCONTAINER_GITHUB_TOKEN:-}"
+  if [ -z "$tok" ] && [ -n "${CODER_AGENT_URL:-}" ] && command -v coder >/dev/null 2>&1; then
+    tok="$(coder external-auth access-token github 2>/dev/null || true)"
+  fi
+  if [ -z "$tok" ] && command -v gh >/dev/null 2>&1; then
+    tok="$(gh auth token 2>/dev/null || true)"
+  fi
+  # A URL (the coder failure mode) or any other junk has characters a token doesn't.
+  case "$tok" in *[!A-Za-z0-9_.-]*|"") tok="" ;; esac
+  if [ -n "$tok" ]; then
+    export GITHUB_TOKEN="$tok"
+    echo "using a GitHub token for tool resolution (5000 req/hr instead of 60)."
+  else
+    echo "note: no GitHub token found; mise will resolve tools anonymously (60 req/hr)."
+  fi
+fi
+
+phase mise-lock
+# Seed mise's lockfile so a fresh box installs pinned versions straight from the
+# recorded URLs+checksums instead of resolving "latest" against the GitHub API
+# once per tool — that resolution is a serial round trip each and dominates
+# bootstrap on a high-latency link.
+#
+# COPIED, not stowed: mise rewrites the lockfile in place whenever it installs a
+# tool that isn't in it (the work overlay's aws-cli, direnv). A symlink would push
+# those edits back into the tracked repo, leaving every devbox with a dirty file
+# that the next startup's `git pull` refuses to overwrite. Refresh with
+# `make update-tools`. Not `locked = true` anywhere: that turns an unlocked tool
+# into a hard failure, which is exactly the work overlay's tools.
+if [ -f "$REPO_DIR/mise.lock" ]; then
+  mise_lock="$HOME/.config/mise/mise.lock"
+  mkdir -p "$(dirname "$mise_lock")"
+  # A symlink here would be one into this repo, and mise rewrites the lockfile in
+  # place on every install — the edits would land on tracked content and the next
+  # bootstrap's `git pull` would refuse to run. Replace it with a real file.
+  if [ -L "$mise_lock" ]; then rm -f "$mise_lock"; fi
+  if [ ! -f "$mise_lock" ] || [ "$REPO_DIR/mise.lock" -nt "$mise_lock" ]; then
+    cp "$REPO_DIR/mise.lock" "$mise_lock"
+    chmod u+w "$mise_lock"
+  fi
+fi
+
+phase mise-install
 if command -v mise >/dev/null 2>&1; then
-  mise install || echo "warning: 'mise install' failed; some tools will be missing." >&2
+  # The downloads are the bulk of bootstrap wall time and nothing needed at the
+  # first prompt depends on them, so detach on a devbox and let the shell come up
+  # while they land. DOTFILES_ASYNC_TOOLS=1/0 overrides in either direction; a
+  # laptop stays synchronous so `make install` still means "tools are ready".
+  if [ -z "${DOTFILES_ASYNC_TOOLS+x}" ] && [ "${CODER:-}" = "true" ]; then
+    DOTFILES_ASYNC_TOOLS=1
+  fi
+  if [ "${DOTFILES_ASYNC_TOOLS:-0}" != 0 ]; then
+    tools_log="${TMPDIR:-/tmp}/dotfiles-mise-install.log"
+    nohup mise install >"$tools_log" 2>&1 &
+    echo "mise install detached (pid $!); progress: tail -f $tools_log"
+  else
+    mise install || echo "warning: 'mise install' failed; some tools will be missing." >&2
+  fi
 else
   echo "mise not found — skipping tool install (see https://mise.jdx.dev)." >&2
 fi
@@ -186,9 +296,12 @@ wire() {
   fi
 }
 
+phase wire
 wire "$HOME/.zshenv"   env.zsh
 wire "$HOME/.zprofile" profile.zsh
 wire "$HOME/.zshrc"    setup.zsh
+
+phase_report
 
 echo "Done. Open a new shell (or 'exec zsh') to pick up the config."
 
