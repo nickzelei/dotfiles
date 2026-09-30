@@ -11,7 +11,9 @@ make          # list commands (self-documenting via `## ` comments in Makefile)
 make install  # brew bundle (skipped if no brew), then ./install.sh
 make stow     # ./install.sh only — symlink + wire startup files, no brew
 make bench    # benchmark zsh init time, appends a row to bench/results.md
+make bench-install # cold install.sh against a throwaway $HOME (devbox bootstrap path)
 make profile  # per-component init profile (ZSH_PROFILE=1 zsh -i -c exit)
+make update-tools  # regenerate mise.lock
 ```
 
 There is no test suite or linter. The way to verify a change is `make stow` (idempotent) then `exec zsh`, or `make bench`/`make profile` for init-time impact.
@@ -38,6 +40,50 @@ When adding shell config, put it in the file matching its scope. Lines are appen
 **Optional packages.** A package is **optional** if it contains a `.optional` marker at its root; `install.sh` stows optional packages only when their name appears in the `DOTFILES_ENABLE` env var (space/comma-separated). The work overlay is such a package: `packages/work/.config/zsh-local` is the private `zsh-work-config` repo as a submodule with `update = none` (so it's never cloned unless opted in), stowing to `~/.config/zsh-local`; `install.sh` forces it with `--checkout` when enabled. `packages/work` also ships a `mise/conf.d/work.toml` that layers on the base mise config. Enable with `DOTFILES_ENABLE=work ./install.sh` or `make install-work`. The `.optional` marker is kept out of `$HOME` via stow's `--ignore`.
 
 **The one hardcoded package name.** `install.sh` defaults `DOTFILES_ENABLE=work` when `CODER=true` and the var is *unset*, so Coder devboxes need no configuration. This is a deliberate, single-line exception to the no-hardcoded-names rule and it is scoped to activation only — the discovery loop below it stays name-agnostic. Don't extend it into a lookup table of packages, and don't "fix" it by putting names in the loop. The unset-vs-empty distinction (`${VAR+x}`) is load-bearing: `DOTFILES_ENABLE=` must be able to opt a workspace out.
+
+**Bootstrap speed.** `install.sh` carries opt-in phase timing (`DOTFILES_TIMING=1`
+prints a per-phase table); `bench/install-bench.sh` drives a cold run against a
+throwaway `$HOME`. The harness snapshots the **working tree**, not HEAD, and drops
+`.git/modules` so submodules re-fetch over the network — it also injects a GitHub
+token, because a sandbox `$HOME` hides `gh`'s keyring and a few anonymous runs will
+drain the 60/hr limit for the whole egress IP. Three things were slow and are now
+fixed; don't undo them:
+
+- Submodule clones run with `--jobs 4` (three independent clones, latency-bound).
+- `mise install` detaches when `CODER=true` (`DOTFILES_ASYNC_TOOLS` overrides
+  either way). Nothing needed at the first prompt depends on those downloads.
+- `install.sh` probes for a GitHub token before mise runs. Unauthenticated tool
+  resolution is 60 requests/hour **per egress IP**, which a devbox fleet shares.
+  On a Coder box the token is already in the environment as
+  `DEVCONTAINER_GITHUB_TOKEN` (grow-workspace's `coder_agent` sets it from
+  `data.coder_external_auth.github`), so that is checked before shelling out to
+  the `coder` CLI. `gh auth token` is last and is effectively laptop-only: `gh` is
+  itself a mise tool this run installs, and the template's `gh-auth.sh` races us
+  because `coder_script` has no ordering — every `run_on_start` script shares one
+  errgroup.
+
+**The mise lockfile.** `mise.lock` at the repo root pins versions, URLs and
+checksums for every platform, so a fresh box downloads directly instead of
+resolving `latest` against the GitHub API once per tool. Three invariants:
+
+- It is **copied** into `~/.config/mise/mise.lock`, never stowed, and `install.sh`
+  deletes a symlink found at that path first. mise rewrites the lockfile in place
+  whenever it installs a tool that isn't in it (the work overlay's `aws-cli`,
+  `direnv`), so a symlink would push those edits onto tracked content and the next
+  bootstrap's `git pull` would refuse to run. `stow --ignore='^mise\.lock$'` backs
+  this up.
+- **Never set `locked = true`.** It turns "tool absent from the lockfile" into a
+  hard failure, which is exactly the work overlay. The lockfile is honoured
+  without it; unlocked tools just resolve normally.
+- `make update-tools` regenerates it from the base config in an isolated
+  `MISE_CONFIG_DIR`/`MISE_DATA_DIR`, so work tools never leak into the tracked file
+  and the pins come from upstream rather than whatever is installed locally.
+
+**neovim uses the aqua backend.** It is spelled `"aqua:neovim/neovim"` in
+`10-dotfiles.toml`, not `neovim`, because the registry default is a vfox Lua plugin
+that makes its own unauthenticated GitHub API calls — it ignores mise's token and
+records no URL in `mise.lock`, so it was the first thing to 403 on a rate-limited
+box. Don't "simplify" it back to `neovim`.
 
 ## Conventions
 
